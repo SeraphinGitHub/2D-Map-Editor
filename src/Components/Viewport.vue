@@ -11,14 +11,14 @@
 <script>
    export default {
       props: {
-         size: Object,
+         viewSize: Object,
       },
       
       data() {
       return {
          style: `
-            height: ${this.size.height}px;
-            width:  ${this.size.width}px;
+            height: ${this.viewSize.height}px;
+            width:  ${this.viewSize.width}px;
          `,
       }},
    }

@@ -1,12 +1,13 @@
 
 import {
+   IPosition,
+   ISize,
    IViewport,
    ICanvasLayers,
    ICtx,
    IStrokeRect,
    IDrawImage,
-   IPosition,
-} from "../Utils/Interfaces";
+} from "./Utils/Interfaces";
 
 import {
    CELL_SIZE,
@@ -17,7 +18,7 @@ import {
    MAX_ZOOM,
    TILES_MAP,
    ITEMS_MAP,
-} from "../Utils/Constantes";
+} from "./Utils/Constantes";
 
 import { SpriteClass } from "./Classes/Sprite";
 import { GridClass   } from "./Classes/Grid";
@@ -37,9 +38,9 @@ const Viewport: IViewport = {
 const CanvasLayers: ICanvasLayers = {};
 const Ctx: ICtx = {};
 
-let TileSprite: SpriteClass;
+let GridList:   Map<string, CellClass> = new Map<string, CellClass>();
 let CellSize:   number = CELL_SIZE;
-let GridList:   Map<string, CellClass> | null;
+let TileSprite: SpriteClass;
 
 
 // ================================================================================================
@@ -50,15 +51,15 @@ document.body.oncontextmenu = (event: MouseEvent) => {
    event.stopPropagation();
 }
 
-const setViewport = (VPsize: {height: number, width: number}) => {
+const setViewport = (viewSize: ISize) => {
    
-   Viewport.x      = Math.floor(VPsize.width  /2);
-   Viewport.y      = Math.floor(VPsize.height /2);
-   Viewport.height = VPsize.height;
-   Viewport.width  = VPsize.width;
+   Viewport.x      = Math.floor(viewSize.width  *0.5);
+   Viewport.y      = Math.floor(viewSize.height *0.5);
+   Viewport.height = viewSize.height;
+   Viewport.width  = viewSize.width;
 }
 
-const setCanvas = (document: Document) => {
+const setCanvas = (mapSize: ISize, document: Document) => {
 
    const layers: string[] = [
       "map",
@@ -70,8 +71,8 @@ const setCanvas = (document: Document) => {
       CanvasLayers[layer] = document.querySelector(`.canvas-${layer}`) as HTMLCanvasElement;
       let canvas = CanvasLayers[layer];
 
-      canvas.height = Viewport.height;
-      canvas.width  = Viewport.width;
+      canvas.height = mapSize.height;
+      canvas.width  = mapSize.width;
 
       Ctx[layer] = canvas.getContext("2d") as CanvasRenderingContext2D;
    });
@@ -88,7 +89,7 @@ const clearCanvas = (ctx: CanvasRenderingContext2D) => {
 // ================================================================================================
 const cycleGrid = (callback: Function) => {
 
-   GridList?.forEach(cell => callback(cell));
+   GridList.forEach(cell => callback(cell));
 }
 
 const withinTheGrid = (mousePos: IPosition, callback: Function) => {
@@ -107,45 +108,6 @@ const withinTheGrid = (mousePos: IPosition, callback: Function) => {
 // ================================================================================================
 // Mouse Events
 // ================================================================================================
-const mouse_Move = (event: MouseEvent) => {
-   
-   clearCanvas(Ctx.select);
-   let mousePos = getMousePos(event);
-   
-   withinTheGrid(mousePos, () => {
-      let hoverCell = getHoverCell(mousePos);
-      
-      strokeRect({
-         ctx: Ctx.select,
-         dX: hoverCell.position.x,
-         dY: hoverCell.position.y,
-         dW: CellSize,
-         dH: CellSize,
-      }, "blue", 4);
-   });
-}
-
-const mouse_Scroll = (event: WheelEvent) => {
-   
-   // Zoom
-   if(event.deltaY < 0) {
-      if(CellSize < MAX_ZOOM) CellSize += SCROLL_PITCH;
-   }
-
-   // Unzoom
-   else if(CellSize !== MIN_ZOOM) CellSize -= SCROLL_PITCH;
-
-   refreshMap();
-}
-
-const mouse_Click = (event: MouseEvent) => {
-
-   if(event.which === 2) {
-      CellSize = CELL_SIZE;
-      refreshMap();
-   }
-}
-
 const getMousePos = (event: MouseEvent) => {
 
    let screenBound = CanvasLayers.select.getBoundingClientRect() as DOMRect;
@@ -158,19 +120,56 @@ const getMousePos = (event: MouseEvent) => {
 
 const getHoverCell = (mousePos: IPosition) => {
 
-   const position: IPosition = {
+   const cellPos: IPosition = {
       x: mousePos.x - (mousePos.x % CellSize),
       y: mousePos.y - (mousePos.y % CellSize),
    };
 
-   const center: IPosition = {
-      x: Math.floor(position.x +CellSize /2),
-      y: Math.floor(position.y +CellSize /2),
-   };
+   let cellID: string = `${cellPos.x /CellSize}-${cellPos.y /CellSize}`;
+   let cell: CellClass | undefined = GridList.get(cellID);
+   
+   if(cell) return cell;
+}
 
-   return {
-      position,
-      center,
+const mouse_Move = (event: MouseEvent) => {
+   
+   clearCanvas(Ctx.select);
+   let mousePos: IPosition = getMousePos(event);
+   
+   withinTheGrid(mousePos, () => {
+      let hoverCell: CellClass | undefined = getHoverCell(mousePos);
+      
+      if(hoverCell) {
+         
+         strokeRect({
+            ctx: Ctx.select,
+            dX: hoverCell.position.x,
+            dY: hoverCell.position.y,
+            dW: CellSize,
+            dH: CellSize,
+         }, "blue", 4);
+      }
+   });
+}
+
+const mouse_Scroll = (event: WheelEvent) => {
+   
+   // Zoom
+   if(event.deltaY < 0) {
+      if(CellSize < MAX_ZOOM) CellSize += SCROLL_PITCH;
+   }
+
+   // Unzoom
+   else if(CellSize >= MIN_ZOOM) CellSize -= SCROLL_PITCH;
+
+   refreshMap();
+}
+
+const mouse_Click = (event: MouseEvent) => {
+
+   if(event.which === 2) {
+      CellSize = CELL_SIZE;
+      refreshMap();
    }
 }
 
@@ -203,35 +202,42 @@ const strokeRect = (
 
 const renderMap = () => {
 
+   const tileSize = TileSprite.size;
+   const tileImg  = TileSprite.img;
+   
    cycleGrid((cell: CellClass) => {
 
-      // if(cell.size !== CellSize) cell.size = CellSize;
+      const [[i, j], [x, y]]: number[][] = cell.setPosition(CellSize);
 
-      let spriteIndex  = cell.j *COLUMNS +cell.i;
-      let spriteArray  = TILES_MAP[spriteIndex];
-      let tileToDraw_X = spriteArray[0] *TileSprite.size;
-      let tileToDraw_Y = spriteArray[1] *TileSprite.size;
-
+      let spriteIndex: number = j *COLUMNS +i;
+      let tile: number[] = TILES_MAP[spriteIndex];
+      
       const destination = {
-         // dX: cell.i *CellSize -viewport.x, // ==> ScrollCam
-         // dY: cell.j *CellSize -viewport.y, // ==> ScrollCam
-         dX: cell.i *CellSize,
-         dY: cell.j *CellSize,
+         // dX: x -viewport.x, // ==> ScrollCam
+         // dY: y -viewport.y, // ==> ScrollCam
+         dX: x,
+         dY: y,
          dW: CellSize,
          dH: CellSize,
       }
 
-      drawImage({
-         ctx: Ctx.map,
-         img: TileSprite.img,
-
-         sX: tileToDraw_X,
-         sY: tileToDraw_Y,
-         sW: TileSprite.size,
-         sH: TileSprite.size,
-
-         ...destination,
-      });
+      if(tile) {
+         let [spriteX, spriteY]: number[] = tile;
+         let drawX: number = spriteX *tileSize;
+         let drawY: number = spriteY *tileSize;
+   
+         drawImage({
+            ctx: Ctx.map,
+            img: tileImg,
+   
+            sX: drawX,
+            sY: drawY,
+            sW: tileSize,
+            sH: tileSize,
+   
+            ...destination,
+         });
+      }
 
       strokeRect({
          ctx: Ctx.map,
@@ -247,6 +253,54 @@ const refreshMap = () => {
 }
 
 
+
+const exportSchema = (schema: number[][]) => {
+
+   /*
+      * schema to export
+      * COLUMNS
+      * ROWS
+      * TILE_MAP
+      * varName for export (ex: "Tile_Map_2D")
+   */
+   
+   const col = 6;
+
+   let varName = "Tile_Map_2D";
+   let resultArray = [];
+   
+   let schemaString = JSON.stringify(schema);
+   
+   let rightSplit   = schemaString.split("[[")[1];
+   let leftSplit    = rightSplit.split("]]")[0];
+   let schemaIndex  = leftSplit.split("],[");
+
+   for(let i = 0; i < schemaIndex.length; i++) {
+
+      let index = schemaIndex[i];
+      let checkedIndex;
+
+      if(index === "") checkedIndex = "   ";
+      else checkedIndex = index;
+
+      if((i +1) % col === 0 && i !== schemaIndex.length -1) {
+         resultArray.push(`${checkedIndex}],\n   [`);
+      }
+      
+      else if(i === schemaIndex.length -1) {
+         resultArray.push(`${checkedIndex}`);
+      }
+
+      else resultArray.push(`${checkedIndex}],  [`);
+   }
+
+   let result = resultArray.join("");
+   let exportString = `const ${varName} = [\n   [${result}],\n];`
+
+   console.log(exportString); // ******************************************************
+}
+
+
 // ================================================================================================
 // Exports
 // ================================================================================================
@@ -254,20 +308,30 @@ const methods = {
    
    init(
       document: Document,
-      VPsize:  {height: number, width: number}
+      mapSize:  ISize,
+      viewSize: ISize,
    ) {
-      
-      setViewport(VPsize);
-      setCanvas(document);
-      
-      TileSprite = new SpriteClass(200, "./TestTilesBlock.png");
-      GridList   = new GridClass(CELL_SIZE, COLUMNS, ROWS).init();
 
-      refreshMap();
+      const tile_map = [
+         [0,1],  [   ],  [1,0],  [1,0],  [0,1],  [   ],
+         [   ],  [1,1],  [   ],  [   ],  [1,0],  [1,0],
+         [0,1],  [   ],  [1,0],  [1,0],  [0,1],  [   ],
+         [   ],  [1,1],  [   ],  [   ],  [1,0],  [1,0],
+      ];
 
-      window.addEventListener("wheel",     (event) => mouse_Scroll(event));
-      window.addEventListener("mousedown", (event) => mouse_Click (event));
-      window.addEventListener("mousemove", (event) => mouse_Move  (event));
+      exportSchema(tile_map); // ***************************
+
+      // setViewport(viewSize);
+      // setCanvas(mapSize, document);
+      
+      // TileSprite = new SpriteClass(200, "./TestTilesBlock.png");
+      // GridList   = new GridClass(CELL_SIZE, COLUMNS, ROWS).init();
+
+      // refreshMap();
+
+      // window.addEventListener("wheel",     (event) => mouse_Scroll(event));
+      // window.addEventListener("mousedown", (event) => mouse_Click (event));
+      // window.addEventListener("mousemove", (event) => mouse_Move  (event));
    },
 }
 

@@ -22,13 +22,13 @@ export class GridClass {
    }
 
    init() {
-      
-      let cellsList = new Map<string, CellClass>();
+      let cellsList: Map<string, CellClass> = new Map<string, CellClass>();
 
       for(let i = 0; i < this.columns; i++) {
          for(let j = 0; j < this.rows; j++) {
-            
-            const newCell = new CellClass(this.cellSize, i, j);
+
+            const newCell = new CellClass(i, j);
+            newCell.setPosition(this.cellSize);
             cellsList.set(newCell.id, newCell);
          }
       }

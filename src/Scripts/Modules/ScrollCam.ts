@@ -1,8 +1,11 @@
 
+// Scroll when left click and grab the map
+// + make tools like draw line (drawWalls empire rising), draw square, draw circle
+
 export const scrollCam = () => {
 
-   // viewport.x = updatePlayer.x -viewport.width/2;
-   // viewport.y = updatePlayer.y -viewport.height/2;
+   // viewport.x = updatePlayer.x -viewport.widt   *0.5;
+   // viewport.y = updatePlayer.y -viewport.height *0.5;
    
    // // Viewport bounderies
    // let vpLeftCol   = Math.floor(viewport.x /CellSize);

@@ -1,4 +1,14 @@
 
+export interface IPosition {
+   x: number,
+   y: number,
+}
+
+export interface ISize {
+   width:  number,
+   height: number,
+}
+
 export interface IViewport {
    x:      number,
    y:      number,
@@ -36,9 +46,4 @@ export interface IDrawImage {
    dY: number,
    dW: number,
    dH: number,
-}
-
-export interface IPosition {
-   x: number,
-   y: number,
 }

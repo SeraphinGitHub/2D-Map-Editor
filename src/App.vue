@@ -2,7 +2,7 @@
 <template>
    <section class="Flex" id="root">
 
-      <Viewport :size="this.viewportSize"/>
+      <Viewport :viewSize="this.viewSize"/>
       
    </section>
 </template>
@@ -24,12 +24,21 @@
       },
 
       mounted() {
-         mapEditor.init(document, this.viewportSize);
+         mapEditor.init(
+            document,
+            this.mapSize,
+            this.viewSize,
+         );
       },
 
       data() {
       return {
-         viewportSize: {
+         mapSize: {
+            height: 900,
+            width: 1300,
+         },
+         
+         viewSize: {
             height: 900,
             width: 1300,
          }
