@@ -1,9 +1,9 @@
 
 <template>
-   <section class="Flex viewport" :style="style">
+   <section :style="style" class="Flex viewport">
 
-      <canvas class="canvas-map"/>
-      <canvas class="canvas-select"/>
+      <canvas :class='`canvas-${this.canvasType.sprite}`'/>
+      <canvas :class='`canvas-${this.canvasType.select}`'/>
 
    </section>
 </template>
@@ -11,14 +11,14 @@
 <script>
    export default {
       props: {
-         viewSize: Object,
+         canvasType: Object,
       },
       
       data() {
       return {
          style: `
-            height: ${this.viewSize.height}px;
-            width:  ${this.viewSize.width}px;
+            height: ${this.canvasType.height}px;
+            width:  ${this.canvasType.width}px;
          `,
       }},
    }
@@ -30,6 +30,7 @@
    .viewport {
       position: relative;
       background-color: black;
+      /* overflow-y: scroll; */
    }
 
    .viewport canvas {
@@ -37,5 +38,4 @@
       height: 100%;
       width: 100%;
    }
-
 </style>

@@ -9,11 +9,30 @@ export interface ISize {
    height: number,
 }
 
+export interface IString {
+   [key: string]: string;
+}
+
+export interface IDOM {
+   [key: string]: HTMLElement,
+}
+
 export interface IViewport {
    x:      number,
    y:      number,
    width:  number,
    height: number,
+}
+
+export interface ICanvas {
+   sprite: string,
+   select: string,
+   height: number,
+   width:  number,
+}
+
+export interface ICanvasSpec {
+   [key: string]: ICanvas,
 }
 
 export interface ICanvasLayers {

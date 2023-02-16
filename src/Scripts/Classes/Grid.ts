@@ -9,30 +9,30 @@ export class GridClass {
    cellSize:  number;
    columns:   number;
    rows:      number;
+   cellsList: Map<string, CellClass>;
 
    constructor(
-      cellSize:  number,
-      columns:   number,
-      rows:      number,
+      cellSize: number,
+      columns:  number,
+      rows:     number,
    ) {
 
       this.cellSize  = cellSize;
       this.columns   = columns;
       this.rows      = rows;
+      this.cellsList = new Map<string, CellClass>();
    }
 
-   init() {
-      let cellsList: Map<string, CellClass> = new Map<string, CellClass>();
+   // init(schema: number[][]) {
+   initGrid() {
 
-      for(let i = 0; i < this.columns; i++) {
-         for(let j = 0; j < this.rows; j++) {
+      for(let col = 0; col < this.columns; col++) {
+         for(let row = 0; row < this.rows; row++) {
 
-            const newCell = new CellClass(i, j);
+            const newCell = new CellClass(col, row);
             newCell.setPosition(this.cellSize);
-            cellsList.set(newCell.id, newCell);
+            this.cellsList.set(newCell.id, newCell);
          }
       }
-
-      return cellsList;
    }
 }

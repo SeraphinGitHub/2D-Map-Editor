@@ -1,8 +1,9 @@
 
 <template>
-   <section class="Flex" id="root">
+   <section class="Flex app" id="root">
 
-      <Viewport :viewSize="this.viewSize"/>
+      <Viewport class="sheet-VP" :canvasType ="this.canvasSpec.sheet"/>
+      <Viewport class="map-VP"   :canvasType ="this.canvasSpec.map"/>
       
    </section>
 </template>
@@ -24,29 +25,54 @@
       },
 
       mounted() {
+         const DOM = {
+            sheetVP: document.querySelector(".sheet-VP"),
+            mapVP:   document.querySelector(".map-VP"),
+         };
+
          mapEditor.init(
-            document,
-            this.mapSize,
-            this.viewSize,
+            DOM,
+            this.canvasSpec,
+            this.worldSize,
          );
       },
 
       data() {
       return {
-         mapSize: {
+         canvasSpec: {
+            map: {
+               sprite: "map-sprite",
+               select: "map-select",
+               height: 800,
+               width:  1200,
+            },
+
+            sheet: {
+               sprite: "sheet-sprite",
+               select: "sheet-select",
+               height: 800,
+               width:  400,
+            },
+         },
+
+         worldSize: {
             height: 900,
             width: 1300,
          },
-         
-         viewSize: {
-            height: 900,
-            width: 1300,
-         }
       }}
    }
 </script>
 
 <style>
+   
+   /* ***** Tempory ***** */
+   .app {
+      justify-content: space-around !important;
+   }
+   /* ***** Tempory ***** */
+
+
+
    html * {
       margin: 0;
       padding: 0;
