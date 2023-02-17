@@ -1,17 +1,18 @@
 
 // =========================================
+// Map Grid
+// =========================================
+export const MAP_CELL_SIZE: number = 100;
+export const MAP_COLUMNS:   number = 12;
+export const MAP_ROWS:      number = 8;
+
+
+// =========================================
 // Sheet Grid
 // =========================================
 export const SHEET_CELL_SIZE: number = 100;
 export const SHEET_COLUMNS:   number = 4;
 export const SHEET_ROWS:      number = 8;
-
-// =========================================
-// Map Grid
-// =========================================
-export const MAP_CELL_SIZE: number = 100;
-export const MAP_COLUMNS:   number = 8;
-export const MAP_ROWS:      number = 4;
 
 
 // =========================================

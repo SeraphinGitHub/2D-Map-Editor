@@ -9,6 +9,10 @@ export interface ISize {
    height: number,
 }
 
+export interface INumber {
+   [key: string]: number,
+}
+
 export interface IString {
    [key: string]: string;
 }
@@ -17,42 +21,38 @@ export interface IDOM {
    [key: string]: HTMLElement,
 }
 
-export interface IViewport {
-   x:      number,
-   y:      number,
-   width:  number,
-   height: number,
-}
-
 export interface ICanvas {
-   sprite: string,
-   select: string,
-   height: number,
-   width:  number,
+   [key: string]: HTMLCanvasElement,
 }
 
 export interface ICanvasSpec {
-   [key: string]: ICanvas,
+   [key: string]: ICanvasSpecElem,
 }
 
-export interface ICanvasLayers {
-   [key: string]: HTMLCanvasElement,
+export interface ICanvasSpecElem extends ISize {
+   sprite:     string,
+   select:     string,
+   gridColor:  string,
+   hoverColor: string,
 }
 
 export interface ICtx {
    [key: string]: CanvasRenderingContext2D,
 }
 
-export interface IStrokeRect {
-   ctx: CanvasRenderingContext2D,
-   
+export interface IDestinationImg {
+
    dX: number,
    dY: number,
    dW: number,
    dH: number,
 }
 
-export interface IDrawImage {
+export interface IStrokeRect extends IDestinationImg {
+   ctx: CanvasRenderingContext2D,
+}
+
+export interface IDrawImage extends IDestinationImg {
    ctx: CanvasRenderingContext2D,
    img: HTMLImageElement,
 
@@ -60,9 +60,5 @@ export interface IDrawImage {
    sY: number,
    sW: number,
    sH: number,
-
-   dX: number,
-   dY: number,
-   dW: number,
-   dH: number,
 }
+

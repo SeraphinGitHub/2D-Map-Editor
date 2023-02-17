@@ -40,18 +40,22 @@
       data() {
       return {
          canvasSpec: {
-            map: {
-               sprite: "map-sprite",
-               select: "map-select",
-               height: 800,
-               width:  1200,
-            },
-
             sheet: {
                sprite: "sheet-sprite",
                select: "sheet-select",
                height: 800,
                width:  400,
+               gridColor: "turquoise",
+               hoverColor: "orangeRed",
+            },
+
+            map: {
+               sprite: "map-sprite",
+               select: "map-select",
+               height: 800,
+               width:  1200,
+               gridColor: "turquoise",
+               hoverColor: "yellow",
             },
          },
 
@@ -83,7 +87,8 @@
       position: fixed;
       height: 100%;
       width: 100%;
-      background-color: dimgray;
+      background-color: rgb(40, 40, 40);
+
    }
    
    .Flex {

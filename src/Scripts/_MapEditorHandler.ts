@@ -1,6 +1,5 @@
 
 import {
-   IPosition,
    ISize,
    IDOM,
    ICanvasSpec,
@@ -28,85 +27,11 @@ import { CellClass     } from "./Classes/Cell";
 
 
 // ================================================================================================
-// Global Variables
+// Global Variables / Functions
 // ================================================================================================
 document.body.oncontextmenu = (event: MouseEvent) => {
    event.preventDefault();
    event.stopPropagation();
-}
-
-let CellSize:      number = MAP_CELL_SIZE;
-let TileSprite:    SpriteClass;
-
-
-// ================================================================================================
-// Mouse Events
-// ================================================================================================
-const getMousePos = (event: MouseEvent) => {
-
-   // let screenBound = CanvasLayers["map-select"].getBoundingClientRect() as DOMRect;
-
-   // return {
-   //    x: Math.floor(event.clientX -screenBound.left) as number,
-   //    y: Math.floor(event.clientY -screenBound.top ) as number,
-   // };
-}
-
-const getHoverCell = (mousePos: IPosition) => {  // **** TO DO (try recast) ****
-
-   // const cellPos: IPosition = {
-   //    x: mousePos.x - (mousePos.x % CellSize),
-   //    y: mousePos.y - (mousePos.y % CellSize),
-   // };
-
-   // let cellID: string = `${cellPos.x /CellSize}-${cellPos.y /CellSize}`;
-   // let cell: CellClass | undefined = MapGridList.get(cellID);
-   
-   // if(cell) return cell;
-}
-
-const mouse_Move = (event: MouseEvent) => {
-   
-   // let ctx = Ctx["map-select"];
-   // clearCanvas("map-select");
-
-   // let mousePos: IPosition = getMousePos(event);
-   
-   // withinTheGrid(mousePos, () => {
-   //    let hoverCell: CellClass | undefined = getHoverCell(mousePos);
-      
-   //    if(hoverCell) {
-         
-   //       strokeRect({
-   //          ctx: ctx,
-   //          dX: hoverCell.position.x,
-   //          dY: hoverCell.position.y,
-   //          dW: CellSize,
-   //          dH: CellSize,
-   //       }, "blue", 4);
-   //    }
-   // });
-}
-
-const mouse_Scroll = (event: WheelEvent, refreshMap: Function) => {
-   
-   // // Zoom
-   // if(event.deltaY < 0) {
-   //    if(CellSize < MAX_ZOOM) CellSize += SCROLL_PITCH;
-   // }
-
-   // // Unzoom
-   // else if(CellSize > MIN_ZOOM) CellSize -= SCROLL_PITCH;
-   
-   // refreshMap();
-}
-
-const mouse_Click = (event: MouseEvent) => {
-
-   // if(event.which === 2) {
-   //    CellSize = MAP_CELL_SIZE;
-   //    refreshMap();
-   // }
 }
 
 
@@ -198,44 +123,29 @@ const methods = {
       worldSize:  ISize,
    ) {
 
-      TileSprite = new SpriteClass(200, "./tiles_sheet.png");
-      
-      const MapVP = new ViewportClass(
-         MAP_CELL_SIZE,
-         MAP_COLUMNS,
-         MAP_ROWS,
-         DOM.mapVP,
-         canvasSpec.map
-      );
-      MapVP.init();
+      const TileSprite: SpriteClass = new SpriteClass(200, "./tiles_sheet.png");
       
       const SheetVP = new ViewportClass(
          SHEET_CELL_SIZE,
          SHEET_COLUMNS,
          SHEET_ROWS,
+         SHEET_TILES,
+         TileSprite,
          DOM.sheetVP,
-         canvasSpec.sheet
+         canvasSpec.sheet,
       );
       SheetVP.init();
 
-      const refresh = {
-         mapSprite:   () => MapVP.refreshSprite  (TileSprite, MAP_TILES, "red"),
-         mapSelect:   () => {},
-         sheetSprite: () => SheetVP.refreshSprite(TileSprite, SHEET_TILES, "yellow"),
-         sheetSelect: () => {},
-      }
-      
-      refresh.mapSprite();
-      refresh.sheetSprite();
-
-      // **** TO DO (try recast) ****
-      // MapGridList   = new GridClass(MAP_CELL_SIZE, MAP_COLUMNS, MAP_ROWS).init(  TILES_MAP  );
-      // SheetGridList = new GridClass(SHEET_CELL_SIZE, SHEET_COLUMNS, SHEET_ROWS).init(  TILES_MAP  );
-      // **** TO DO (try recast) ****
-
-      window.addEventListener("wheel",     (event) => mouse_Scroll(event, refresh.mapSprite));
-      window.addEventListener("mousedown", (event) => mouse_Click (event));
-      window.addEventListener("mousemove", (event) => mouse_Move  (event));
+      const MapVP = new ViewportClass(
+         MAP_CELL_SIZE,
+         MAP_COLUMNS,
+         MAP_ROWS,
+         MAP_TILES,
+         TileSprite,
+         DOM.mapVP,
+         canvasSpec.map,
+      );
+      MapVP.init();
    },
 }
 
