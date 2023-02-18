@@ -1,12 +1,14 @@
 
-export interface IPosition {
-   x: number,
-   y: number,
+export interface IConstantes {
+   [key: string]: IGrid,
 }
 
-export interface ISize {
-   width:  number,
-   height: number,
+export interface IGrid {
+   CELL_SIZE:    number,
+   COLUMNS:      number,
+   ROWS:         number,
+   TILES_SCHEMA: number[][],
+   ITEMS_SCHEMA: number[][],
 }
 
 export interface INumber {
@@ -15,6 +17,20 @@ export interface INumber {
 
 export interface IString {
    [key: string]: string;
+}
+
+export interface ISchema {
+   [key: string]: number[][]
+}
+
+export interface IPosition {
+   x: number,
+   y: number,
+}
+
+export interface ISize {
+   width:  number,
+   height: number,
 }
 
 export interface IDOM {
@@ -61,4 +77,3 @@ export interface IDrawImage extends IDestinationImg {
    sW: number,
    sH: number,
 }
-

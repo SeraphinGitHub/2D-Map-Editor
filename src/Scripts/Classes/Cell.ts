@@ -7,8 +7,8 @@ import { IPosition } from "../Utils/Interfaces";
 export class CellClass {
 
    id: string;
-   col:  number;
-   row:  number;
+   colID:  number;
+   rowID:  number;
 
    position:  IPosition;
    center:    IPosition;
@@ -17,13 +17,13 @@ export class CellClass {
    isBlocked: boolean;
 
    constructor(
-      col: number,
-      row: number,
+      colID: number,
+      rowID: number,
    ) {
 
-      this.id  = `${col}-${row}`;
-      this.col = col;
-      this.row = row;
+      this.id    = `${colID}-${rowID}`;
+      this.colID = colID;
+      this.rowID = rowID;
 
       this.position = {
          x: 0,
@@ -42,16 +42,14 @@ export class CellClass {
 
    setPosition(cellSize: number) {
 
-      let indexPos: number[] = [this.col, this.row];
-
       let position: number[] = [
-         this.position.x = indexPos[0] *cellSize, // posX
-         this.position.y = indexPos[1] *cellSize, // posY
+         this.position.x = this.colID *cellSize, // posX
+         this.position.y = this.rowID *cellSize, // posY
       ];
 
       let center: number[] = this.setCenter(cellSize, position);
 
-      return [indexPos, position, center];
+      return [position, center];
    }
 
    setCenter(

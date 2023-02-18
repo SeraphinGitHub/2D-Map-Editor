@@ -38,7 +38,7 @@
       },
 
       data() {
-      return {
+      return {         
          canvasSpec: {
             sheet: {
                sprite: "sheet-sprite",
@@ -63,7 +63,8 @@
             height: 900,
             width: 1300,
          },
-      }}
+      }},
+      
    }
 </script>
 

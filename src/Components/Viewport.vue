@@ -8,7 +8,9 @@
    </section>
 </template>
 
+
 <script>
+
    export default {
       props: {
          canvasType: Object,

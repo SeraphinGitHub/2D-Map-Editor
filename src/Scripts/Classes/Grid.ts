@@ -6,10 +6,10 @@ import { CellClass } from "./Cell";
 // =====================================================================
 export class GridClass {
 
-   cellSize:  number;
-   columns:   number;
-   rows:      number;
-   cellsList: Map<string, CellClass>;
+   Gd_cellSize:  number;
+   Gd_columns:   number;
+   Gd_rows:      number;
+   Gd_cellsList: Map<string, CellClass>;
 
    constructor(
       cellSize: number,
@@ -17,21 +17,21 @@ export class GridClass {
       rows:     number,
    ) {
 
-      this.cellSize  = cellSize;
-      this.columns   = columns;
-      this.rows      = rows;
-      this.cellsList = new Map<string, CellClass>();
+      this.Gd_cellSize  = cellSize;
+      this.Gd_columns   = columns;
+      this.Gd_rows      = rows;
+      this.Gd_cellsList = new Map<string, CellClass>();
    }
 
    // init(schema: number[][]) {
    initGrid() {
 
-      for(let col = 0; col < this.columns; col++) {
-         for(let row = 0; row < this.rows; row++) {
+      for(let col = 0; col < this.Gd_columns; col++) {
+         for(let row = 0; row < this.Gd_rows; row++) {
 
             const newCell = new CellClass(col, row);
-            newCell.setPosition(this.cellSize);
-            this.cellsList.set(newCell.id, newCell);
+            newCell.setPosition(this.Gd_cellSize);
+            this.Gd_cellsList.set(newCell.id, newCell);
          }
       }
    }

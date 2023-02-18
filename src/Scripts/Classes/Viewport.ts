@@ -1,7 +1,9 @@
 
 import {
-   IPosition,
+   IGrid,
    IString,
+   ISchema,
+   IPosition,
    ICtx,
    ICanvas,
    ICanvasSpecElem,
@@ -10,67 +12,180 @@ import {
    IDestinationImg,
 } from "../Utils/Interfaces";
 
-import { GridClass   } from "./Grid";
 import { CellClass   } from "./Cell";
 import { SpriteClass } from "./Sprite";
+
+interface IMousParams {
+   eventsList: IString,
+   selectCtx:  CanvasRenderingContext2D,
+   viewBound:  DOMRect,
+}
 
 
 // =====================================================================
 // ViewportClass
 // =====================================================================
-export class ViewportClass extends GridClass {
-
-   x:      number;
-   y:      number;
-   width:  number;
-   height: number;
-
-   schema:  number[][];
-   sprite:  SpriteClass;
-   htmlVP:  HTMLElement;
-   layers:  ICanvas;
-   ctxList: ICtx;
+export class ViewportClass {
    
-   layersName:    IString;
-   gridColor:     string;
-   hoverColor:    string;
+   x:           number;
+   y:           number;
+   width:       number;
+   height:      number;
+
+   scrollPicth: number;
+   scrollMax:   number;
+   scrollSize:  number;
+
+   cellSize:    number;
+   columns:     number;
+   rows:        number;
+   tilesSchema: number[][];
+   itemsSchema: number[][];
+   schemaKey:   string;
+
+   cellsList:   Map<string, CellClass>;
+
+   sprite:      SpriteClass;
+   htmlVP:      HTMLElement;
+   layers:      ICanvas;
+   ctxList:     ICtx;
+   
+   layersName:  IString;
+   gridColor:   string;
+   hoverColor:  string;
+
+   mouseEventsList: IString;
 
    constructor(
-      cellSize: number,
-      columns:  number,
-      rows:     number,
-      schema:   number[][],
-      sprite:   SpriteClass,
+      mapConst:     IGrid,
+      sprite:       SpriteClass,
       htmlViewport: HTMLElement,
       canvasType:   ICanvasSpecElem,
+      schemaKey:    string,
    ) {
-      super(cellSize, columns, rows);
-      
-      this.x       = 0;
-      this.y       = 0;
-      this.width   = canvasType.width;
-      this.height  = canvasType.height;
 
-      this.schema  = schema;
-      this.sprite  = sprite;
-      this.htmlVP  = htmlViewport;
-      this.layers  = {};
-      this.ctxList = {};
+      { // Variables
+         this.x           = 0;
+         this.y           = 0;
+         this.width       = canvasType.width;
+         this.height      = canvasType.height;
 
-      this.layersName  = {
-         sprite: canvasType.sprite,
-         select: canvasType.select,
-      };
+         this.scrollPicth = 20,
+         this.scrollMax   = 350,
+         this.scrollSize  = mapConst.CELL_SIZE,
 
-      this.gridColor  = canvasType.gridColor;
-      this.hoverColor = canvasType.hoverColor;
+         this.cellSize    = mapConst.CELL_SIZE;
+         this.columns     = mapConst.COLUMNS;
+         this.rows        = mapConst.ROWS;
+         this.tilesSchema = mapConst.TILES_SCHEMA;
+         this.itemsSchema = mapConst.ITEMS_SCHEMA;
+         this.schemaKey   = schemaKey;
+
+         this.cellsList   = new Map<string, CellClass>();
+
+         this.sprite      = sprite;
+         this.htmlVP      = htmlViewport;
+         this.layers      = {};
+         this.ctxList     = {};
+
+         this.layersName = {
+            sprite: canvasType.sprite,
+            select: canvasType.select,
+         };
+
+         this.gridColor  = canvasType.gridColor;
+         this.hoverColor = canvasType.hoverColor;
+
+         this.mouseEventsList = {
+            move:   "mousemove",
+            down:   "mousedown",
+            leave:  "mouseleave",
+            scroll: "wheel",
+         };
+      }
    }
-
+   
    init() {
+
       this.initGrid();
       this.initCanvas();
-      this.initMouseEvents();
+      this.initMouse();
       this.refreshSprites();
+
+      // ***** Tempory *****
+      this.saveSchemasToLS();
+   }
+
+   initGrid() {
+
+      const schemasString: string | null = localStorage.getItem(this.schemaKey);
+
+      // Render Exiting Schema
+      if(schemasString !== null) {
+      
+         const { tilesSchema, itemsSchema }: ISchema = JSON.parse(schemasString);
+         
+         if(tilesSchema.length !== 0
+         && itemsSchema.length !== 0) {
+            
+            this.tilesSchema = tilesSchema;
+            this.itemsSchema = itemsSchema;
+            this.renderGrid( this.setCellTile.bind(this) );
+         }
+      }
+      
+      // Render Empty Grid
+      else this.renderGrid( this.setEmptySchemas.bind(this) );
+   }
+
+   saveSchemasToLS() {
+
+      const schemasGroup = {
+         tilesSchema: this.tilesSchema,
+         itemsSchema: this.itemsSchema,
+      }
+
+      const groupString = JSON.stringify(schemasGroup);
+      localStorage.setItem(this.schemaKey, groupString);
+   }
+
+   renderGrid(callback: Function) {
+
+      for(let colID = 0; colID < this.columns; colID++) {
+         for(let rowID = 0; rowID < this.rows; rowID++) {
+
+            const newCell:CellClass = new CellClass(colID, rowID);
+            newCell.setPosition(this.cellSize);
+
+            callback(rowID, colID, newCell);
+
+            this.cellsList.set(newCell.id, newCell);
+         }
+      }
+   }
+
+   setCellTile(
+      rowID:   number,
+      colID:   number,
+      newCell: CellClass,
+   ) {
+
+      const index: number   = rowID *this.columns +colID;
+      const tile:  number[] = this.tilesSchema[index];
+      const item:  number[] = this.itemsSchema[index];
+
+      newCell.tileIndex = tile;
+      newCell.itemIndex = item;
+   }
+
+   setEmptySchemas() {
+
+      this.tilesSchema.push([]);
+      this.itemsSchema.push([]);
+   }
+
+   cycleGrid(callback: Function) {
+      this.cellsList.forEach(cell => callback(cell));
    }
 
    initCanvas() {
@@ -92,10 +207,6 @@ export class ViewportClass extends GridClass {
    
    clearCanvas(ctx: CanvasRenderingContext2D)  {
       ctx.clearRect(this.x, this.y, this.width, this.height);
-   }
-
-   cycleGrid(callback: Function) {
-      this.cellsList.forEach(cell => callback(cell));
    }
 
    drawImage(param: IDrawImage) {
@@ -132,8 +243,8 @@ export class ViewportClass extends GridClass {
       this.clearCanvas(spriteCtx);
       
       // Render Sprites Grid
-      this.renderSprites(spriteCtx, this.gridColor, gridGap, this.drawSprites.bind(this)); // Render Sprites
-      this.renderSprites(spriteCtx, "black", gapCover, () => {});                          // Render Black Grid
+      this.renderSprites(spriteCtx, this.gridColor, gridGap, this.drawOneSprite.bind(this)); // Render Sprites
+      this.renderSprites(spriteCtx, "black", gapCover, () => {});                            // Render Black Grid
    }
 
    renderSprites(
@@ -145,11 +256,11 @@ export class ViewportClass extends GridClass {
 
       const tileSize  = this.sprite.size;
       const tileImg   = this.sprite.img;
-      const cellSize  = this.cellSize;
-
+      const cellSize  = this.scrollSize;
+      
       this.cycleGrid((cell: CellClass) => {
    
-         const [[col, row], [x, y]]: number[][] = cell.setPosition(cellSize);
+         const [[x, y]]: number[][] = cell.setPosition(cellSize);
          
          const destination = {
             // dX: x -viewport.x, // ==> ScrollCam
@@ -160,8 +271,11 @@ export class ViewportClass extends GridClass {
             dH: cellSize,
          }
 
-         callback(row, col, spriteCtx, tileImg, tileSize, destination);
-
+         // Draw Sprites
+         callback(cell.tileIndex, spriteCtx, tileImg, tileSize, destination);
+         callback(cell.itemIndex, spriteCtx, tileImg, tileSize, destination);
+         
+         // Draw Grid Color
          this.strokeRect({
             ctx: spriteCtx,
             ...destination,
@@ -169,37 +283,76 @@ export class ViewportClass extends GridClass {
       });
    }
 
-   drawSprites(
-      row: number,
-      col: number,
+   drawOneSprite(
+      index:       number[],
       spriteCtx:   CanvasRenderingContext2D,
       tileImg:     HTMLImageElement,
       tileSize:    number,
       destination: IDestinationImg,
    ) {
-      const spriteIndex: number = row *this.columns +col;
-      const tile: number[]      = this.schema[spriteIndex];
       
-      if(tile) {
-         const [spriteY, spriteX]: number[] = tile;
-         const drawX: number = spriteX *tileSize;
-         const drawY: number = spriteY *tileSize;
-         
-         this.drawImage({
-            ctx: spriteCtx,
-            img: tileImg,
-   
-            sX: drawX,
-            sY: drawY,
-            sW: tileSize,
-            sH: tileSize,
-   
-            ...destination,
-         });
-      }
+      if(index.length === 0) return;
+      
+      const [spriteY, spriteX]: number[] = index;
+      const drawX: number = spriteX *tileSize;
+      const drawY: number = spriteY *tileSize;
+
+      this.drawImage({
+         ctx: spriteCtx,
+         img: tileImg,
+
+         sX: drawX,
+         sY: drawY,
+         sW: tileSize,
+         sH: tileSize,
+
+         ...destination,
+      });
    }
 
-   // Select Grid  &  Hover Cell 
+   // Select Grid
+   refreshHoverCell(
+      event:     MouseEvent,
+      viewBound: DOMRect,
+      selectCtx: CanvasRenderingContext2D,
+   ) {
+
+      this.clearCanvas(selectCtx);
+      this.renderHoverCell(event, viewBound, selectCtx);
+   }
+
+   renderHoverCell(
+      event:     MouseEvent,
+      viewBound: DOMRect,
+      selectCtx: CanvasRenderingContext2D,
+   ) {
+      
+      const mousePos:  IPosition = this.getMousePos(event, viewBound);
+      const hoverCell: CellClass = this.getHoverCell(mousePos)!;
+      
+      const borderSize: number = 8;
+      const fillSize:   number = 6;
+
+      const destination = {
+         dX:  hoverCell.position.x,
+         dY:  hoverCell.position.y,
+         dW:  this.scrollSize,
+         dH:  this.scrollSize,
+      }
+
+      // Draw HoverCell borders
+      this.strokeRect({
+         ctx: selectCtx,
+         ...destination,
+      }, "black", borderSize);
+      
+      // Draw HoverCell color
+      this.strokeRect({
+         ctx: selectCtx,
+         ...destination,
+      }, this.hoverColor, fillSize);
+   }
+
    getMousePos(event: MouseEvent, viewBound: DOMRect) {
       return {
          x: Math.floor(event.clientX -viewBound.left) as number,
@@ -207,14 +360,9 @@ export class ViewportClass extends GridClass {
       };
    }
    
-   getHoverCell(mousePos: IPosition) {  // **** TO DO (try recast) ****
+   getHoverCell(mousePos: IPosition) {
       
-      // **** TO DO (try recast) ****
-      // this.tileIndex = [];    <== using this (CellClass)
-      // this.itemIndex = [];
-      // **** TO DO (try recast) ****
-
-      const cellSize: number = this.cellSize;
+      const cellSize: number = this.scrollSize;
 
       const cellPos: IPosition = {
          x: mousePos.x - (mousePos.x % cellSize),
@@ -227,47 +375,6 @@ export class ViewportClass extends GridClass {
       return cell;
    }
 
-   refreshSelect(
-      event:     MouseEvent,
-      viewBound: DOMRect,
-      selectCtx: CanvasRenderingContext2D,
-   ) {
-
-      // Clear Select Grid
-      this.clearCanvas(selectCtx);
-   
-      const cellSize:  number    = this.cellSize;
-      const mousePos:  IPosition = this.getMousePos(event, viewBound);
-      const hoverCell: CellClass = this.getHoverCell(mousePos)!;
-      
-      const destination = {
-         dX:  hoverCell.position.x,
-         dY:  hoverCell.position.y,
-         dW:  cellSize,
-         dH:  cellSize,
-      }
-
-      const borderSize: number = 8;
-      const fillSize:   number = 6;
-
-      // Render Hover Cell
-      this.renderSelect(selectCtx, destination, "black", borderSize);       // Render border color
-      this.renderSelect(selectCtx, destination, this.hoverColor, fillSize); // Render fill color
-   }
-
-   renderSelect(
-      selectCtx:   CanvasRenderingContext2D,
-      destination: IDestinationImg,
-      color: string,
-      size:  number,
-   ) {
-
-      this.strokeRect({
-         ctx: selectCtx,
-         ...destination,
-      }, color, size);
-   }
-   
    // Mouse Events
    mouseMove(
       event:     MouseEvent,
@@ -275,44 +382,106 @@ export class ViewportClass extends GridClass {
       selectCtx: CanvasRenderingContext2D,
    ) {
 
-      this.refreshSelect(event, viewBound, selectCtx);
+      this.refreshHoverCell(event, viewBound, selectCtx);
    }
    
-   mouseScroll(event: WheelEvent) {
+   mouseScroll(
+      event:     WheelEvent,
+      viewBound: DOMRect,
+      selectCtx: CanvasRenderingContext2D,
+   ) {
       
-      // // Zoom
-      // if(event.deltaY < 0) {
-      //    if(CellSize < MAX_ZOOM) CellSize += SCROLL_PITCH;
-      // }
+      // Zoom
+      if(event.deltaY < 0) {
+
+         if(this.scrollSize >= this.scrollMax) return;
+         this.scrollSize += this.scrollPicth;
+      }
    
-      // // Unzoom
-      // else if(CellSize > MIN_ZOOM) CellSize -= SCROLL_PITCH;
-      
-      // refreshMap();
+      // Unzoom
+      else {
+
+         if(this.scrollSize <= this.scrollPicth) return;
+         this.scrollSize -= this.scrollPicth;
+      }
+
+      this.refreshSprites();
+      this.refreshHoverCell(event, viewBound, selectCtx);
    }
    
    mouseClick(event: MouseEvent) {
-   
-      // if(event.which === 2) {
-      //    CellSize = MAP_CELL_SIZE;
-      //    refreshMap();
-      // }
+
+      // Left Click
+      if(event.which === 1) {
+
+         this.saveSchemasToLS();
+      }
+
+      // Right Click
+      if(event.which === 3) {
+
+      }
+
+      // Scroll Click
+      if(event.which === 2) {
+
+         this.scrollSize = this.cellSize;
+         this.refreshSprites();
+      }
    }
 
    mouseLeave(ctx: CanvasRenderingContext2D) {
       this.clearCanvas(ctx);
    }
 
-   initMouseEvents() {
-      
-      const selectName   = this.layersName.select;
-      const selectCtx    = this.ctxList[selectName];
-      const selectCanvas = this.layers [selectName];
-      const viewBound    = selectCanvas.getBoundingClientRect();
+   initMouse() {
 
-      this.htmlVP.addEventListener("mouseleave", ()      => this.mouseLeave (selectCtx));
-      this.htmlVP.addEventListener("mousemove",  (event) => this.mouseMove  (event, viewBound, selectCtx));
-      this.htmlVP.addEventListener("mousedown",  (event) => this.mouseClick (event));
-      this.htmlVP.addEventListener("wheel",      (event) => this.mouseScroll(event));
+      const htmlVP: HTMLElement = this.htmlVP;
+      const eventsList: IString = this.mouseEventsList;
+
+      const selectName   = this.layersName.select   as string;
+      const selectCtx    = this.ctxList[selectName] as CanvasRenderingContext2D;
+      const selectCanvas = this.layers [selectName] as HTMLCanvasElement;
+      const viewBound    = selectCanvas.getBoundingClientRect() as DOMRect;
+
+      const params = {
+         eventsList,
+         selectCtx,
+         viewBound,
+      }
+
+      for(let i in eventsList) {
+         let eventName: string = eventsList[i];
+         htmlVP.addEventListener(eventName, (event) => this.handleMouse(params, eventName, event));
+      }
    }
+
+   handleMouse(
+      params:    IMousParams,
+      eventName: string,
+      event:     any,
+   ) {
+      
+      const { eventsList, selectCtx, viewBound } = params;
+
+      switch(eventName) {
+
+         case eventsList.move:
+            this.mouseMove(event, viewBound, selectCtx);
+         break;
+
+         case eventsList.down:
+            this.mouseClick(event);
+         break;
+
+         case eventsList.leave:
+            this.mouseLeave(selectCtx);
+         break;
+
+         case eventsList.scroll:
+            this.mouseScroll(event, viewBound, selectCtx);
+         break;
+      }
+   }
+
 }

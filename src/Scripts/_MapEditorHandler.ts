@@ -5,57 +5,43 @@ import {
    ICanvasSpec,
 } from "./Utils/Interfaces";
 
-import {
-   SHEET_CELL_SIZE,
-   SHEET_COLUMNS,
-   SHEET_ROWS,
-   MAP_CELL_SIZE,
-   MAP_COLUMNS,
-   MAP_ROWS,
-   SCROLL_PITCH,
-   MIN_ZOOM,
-   MAX_ZOOM,
-   MAP_TILES,
-   MAP_ITEMS,
-   SHEET_TILES,
-} from "./Utils/Constantes";
-
+import { saveAs        } from "file-saver";
+import { Constantes    } from "./Utils/Constantes";
 import { ViewportClass } from "./Classes/Viewport";
 import { SpriteClass   } from "./Classes/Sprite";
-import { GridClass     } from "./Classes/Grid";
-import { CellClass     } from "./Classes/Cell";
 
 
 // ================================================================================================
 // Global Variables / Functions
 // ================================================================================================
+const formatedKey: string = "formatedMap";
+const mapKey:      string = "storedMap";
+const sheetKey:    string = "storedSheet";
+
+let exportVarName: string = "Tile_Map_2D";
+
 document.body.oncontextmenu = (event: MouseEvent) => {
    event.preventDefault();
    event.stopPropagation();
 }
 
-
-
-const exportSchema = (schema: number[][]) => {
-
-   /*
-      * schema to export
-      * COLUMNS
-      * ROWS
-      * TILE_MAP
-      * varName for export (ex: "Tile_Map_2D")
-   */
+// ==> Need to create HTML buttons
+// ==> then call:
+// // saveToLocal(exportVarName, Constantes.map.TILES_SCHEMA);
+// // exportSchema();
+const formatToExport = (
+   varName: string,
+   schema: number[][]
+) => {
    
-   const col = 6;
-
-   let varName = "Tile_Map_2D";
    let resultArray = [];
    
-   let schemaString = JSON.stringify(schema);
-   
-   let rightSplit   = schemaString.split("[[")[1];
-   let leftSplit    = rightSplit.split("]]")[0];
-   let schemaIndex  = leftSplit.split("],[");
+   const schemaString = JSON.stringify(schema);
+   const rightSplit   = schemaString.split("[[")[1];
+   const leftSplit    = rightSplit.split("]]")[0];
+   const schemaIndex  = leftSplit.split("],[");
+
+   const col = Constantes.map.COLUMNS;
 
    for(let i = 0; i < schemaIndex.length; i++) {
 
@@ -68,7 +54,7 @@ const exportSchema = (schema: number[][]) => {
       if((i +1) % col === 0 && i !== schemaIndex.length -1) {
          resultArray.push(`${checkedIndex}],\n   [`);
       }
-      
+
       else if(i === schemaIndex.length -1) {
          resultArray.push(`${checkedIndex}`);
       }
@@ -76,40 +62,38 @@ const exportSchema = (schema: number[][]) => {
       else resultArray.push(`${checkedIndex}],  [`);
    }
 
-   let result = resultArray.join("");
-   let exportString = `const ${varName} = [\n   [${result}],\n];`
+   const result       = resultArray.join("");
+   const exportString = `const ${varName} = [\n   [${result}],\n];`
 
-   console.log(exportString); // ******************************************************
+   return exportString;
 }
 
-// **** TO DO ****
-const createGrid = (
-   tileSchema: number[][],
-   itemSchema: number[][]
+const saveToLocal = (
+   varName: string,
+   schema: number[][]
 ) => {
 
-   let cellsList: Map<string, CellClass> = new Map<string, CellClass>();
-
-   for(let col = 0; col < MAP_COLUMNS; col++) {
-      for(let row = 0; row < MAP_ROWS; row++) {
-         
-         let index: number   = row *MAP_COLUMNS +col;
-         let tile:  number[] = tileSchema[index];
-         let item:  number[] = itemSchema[index];
-
-         const newCell = new CellClass(col, row);
-
-         if(tile) newCell.tileIndex = tile;
-         if(item) newCell.tileIndex = item;
-
-         newCell.setPosition(MAP_CELL_SIZE);
-         cellsList.set(newCell.id, newCell);
-      }
-   }
-
-   return cellsList;
+   const content = formatToExport(varName, schema);
+   localStorage.setItem(formatedKey, content);
+   localStorage.setItem(mapKey, JSON.stringify(schema));
 }
 
+const exportSchema = () => {
+
+   let content: string | null = null;
+
+   if(localStorage.getItem(formatedKey) === null) {
+
+      saveToLocal(exportVarName, Constantes.map.TILES_SCHEMA);
+      content = formatToExport(exportVarName, Constantes.map.TILES_SCHEMA);
+   }
+   else content = localStorage.getItem(formatedKey);
+
+   const file = new Blob([ `${content}` ], { type: 'text/plain;charset=utf-8' });
+   const name = "2D Map Editor - MapSchema.txt";
+   
+   saveAs(file, name);
+}
 
 
 // ================================================================================================
@@ -123,29 +107,41 @@ const methods = {
       worldSize:  ISize,
    ) {
 
+      const { TileSprite, SheetVP, MapVP } = this.initClasses(DOM, canvasSpec);
+
+      TileSprite.img.addEventListener("load", () => {
+         SheetVP.init();
+         MapVP.init();
+      });
+   },
+
+   initClasses(
+      DOM:        IDOM,
+      canvasSpec: ICanvasSpec,
+   ) {
       const TileSprite: SpriteClass = new SpriteClass(200, "./tiles_sheet.png");
-      
+
       const SheetVP = new ViewportClass(
-         SHEET_CELL_SIZE,
-         SHEET_COLUMNS,
-         SHEET_ROWS,
-         SHEET_TILES,
+         Constantes.sheet,
          TileSprite,
          DOM.sheetVP,
          canvasSpec.sheet,
+         sheetKey,
       );
-      SheetVP.init();
 
       const MapVP = new ViewportClass(
-         MAP_CELL_SIZE,
-         MAP_COLUMNS,
-         MAP_ROWS,
-         MAP_TILES,
+         Constantes.map,
          TileSprite,
          DOM.mapVP,
          canvasSpec.map,
+         mapKey,
       );
-      MapVP.init();
+
+      return {
+         TileSprite,
+         SheetVP,
+         MapVP,
+      }
    },
 }
 
