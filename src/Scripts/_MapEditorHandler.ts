@@ -14,7 +14,6 @@ import { SpriteClass   } from "./Classes/Sprite";
 // ================================================================================================
 // Global Variables / Functions
 // ================================================================================================
-const formatedKey: string = "formatedMap";
 const mapKey:      string = "storedMap";
 const sheetKey:    string = "storedSheet";
 
@@ -25,13 +24,10 @@ document.body.oncontextmenu = (event: MouseEvent) => {
    event.stopPropagation();
 }
 
-// ==> Need to create HTML buttons
-// ==> then call:
-// // saveToLocal(exportVarName, Constantes.map.TILES_SCHEMA);
-// // exportSchema();
+
 const formatToExport = (
    varName: string,
-   schema: number[][]
+   schema:  number[][]
 ) => {
    
    let resultArray = [];
@@ -68,32 +64,20 @@ const formatToExport = (
    return exportString;
 }
 
-const saveToLocal = (
-   varName: string,
-   schema: number[][]
-) => {
+const exportSchema = (formatedSchema: string) => {
 
-   const content = formatToExport(varName, schema);
-   localStorage.setItem(formatedKey, content);
-   localStorage.setItem(mapKey, JSON.stringify(schema));
-}
-
-const exportSchema = () => {
-
-   let content: string | null = null;
-
-   if(localStorage.getItem(formatedKey) === null) {
-
-      saveToLocal(exportVarName, Constantes.map.TILES_SCHEMA);
-      content = formatToExport(exportVarName, Constantes.map.TILES_SCHEMA);
-   }
-   else content = localStorage.getItem(formatedKey);
-
-   const file = new Blob([ `${content}` ], { type: 'text/plain;charset=utf-8' });
+   const file = new Blob([formatedSchema], { type: 'text/plain;charset=utf-8' });
    const name = "2D Map Editor - MapSchema.txt";
    
    saveAs(file, name);
 }
+
+
+// enum trileState {
+//    notWalkable,
+//    walkable,
+//    safe,
+// }
 
 
 // ================================================================================================
@@ -104,14 +88,15 @@ const methods = {
    init(
       DOM:        IDOM,
       canvasSpec: ICanvasSpec,
-      worldSize:  ISize,
    ) {
 
       const { TileSprite, SheetVP, MapVP } = this.initClasses(DOM, canvasSpec);
 
       TileSprite.img.addEventListener("load", () => {
-         SheetVP.init();
+         // SheetVP.init();
          MapVP.init();
+
+         MapVP.TestScollCam();
       });
    },
 
@@ -119,7 +104,7 @@ const methods = {
       DOM:        IDOM,
       canvasSpec: ICanvasSpec,
    ) {
-      const TileSprite: SpriteClass = new SpriteClass(200, "./tiles_sheet.png");
+      const TileSprite: SpriteClass = new SpriteClass(200, "./tiles_0.png");
 
       const SheetVP = new ViewportClass(
          Constantes.sheet,

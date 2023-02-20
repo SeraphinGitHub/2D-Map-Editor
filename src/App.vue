@@ -2,8 +2,8 @@
 <template>
    <section class="Flex app" id="root">
 
-      <Viewport class="sheet-VP" :canvasType ="this.canvasSpec.sheet"/>
-      <Viewport class="map-VP"   :canvasType ="this.canvasSpec.map"/>
+      <Viewport class="sheet-VP" :canvasType="this.canvasSpec.sheet"/>
+      <Viewport class="map-VP"   :canvasType="this.canvasSpec.map"  />
       
    </section>
 </template>
@@ -33,7 +33,6 @@
          mapEditor.init(
             DOM,
             this.canvasSpec,
-            this.worldSize,
          );
       },
 
@@ -57,11 +56,6 @@
                gridColor: "turquoise",
                hoverColor: "yellow",
             },
-         },
-
-         worldSize: {
-            height: 900,
-            width: 1300,
          },
       }},
       

@@ -6,38 +6,38 @@ import { IPosition } from "../Utils/Interfaces";
 // =====================================================================
 export class CellClass {
 
-   id: string;
-   colID:  number;
-   rowID:  number;
+   id:        string;
+   colID:     number;
+   rowID:     number;
 
    position:  IPosition;
    center:    IPosition;
    tileIndex: number[];
    itemIndex: number[];
-   isBlocked: boolean;
+   state:     number;
 
    constructor(
       colID: number,
       rowID: number,
    ) {
 
-      this.id    = `${colID}-${rowID}`;
-      this.colID = colID;
-      this.rowID = rowID;
-
-      this.position = {
-         x: 0,
-         y: 0,
-      };
-
-      this.center = {
-         x: 0,
-         y: 0,
-      };
-
+      this.id        = `${colID}-${rowID}`;
+      this.colID     = colID;
+      this.rowID     = rowID;
+      
       this.tileIndex = [];
       this.itemIndex = [];
-      this.isBlocked = false;
+      this.state     = 1;
+
+      this.position  = {
+         x: 0,
+         y: 0,
+      };
+
+      this.center    = {
+         x: 0,
+         y: 0,
+      };
    }
 
    setPosition(cellSize: number) {

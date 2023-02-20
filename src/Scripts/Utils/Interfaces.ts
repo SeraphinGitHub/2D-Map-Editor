@@ -33,6 +33,8 @@ export interface ISize {
    height: number,
 }
 
+export interface IViewport extends IPosition, ISize {}
+
 export interface IDOM {
    [key: string]: HTMLElement,
 }

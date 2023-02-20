@@ -1,6 +1,6 @@
 
 <template>
-   <section :style="style" class="Flex viewport">
+   <section :style="viewSize" :class='`Flex viewport`'>
 
       <canvas :class='`canvas-${this.canvasType.sprite}`'/>
       <canvas :class='`canvas-${this.canvasType.select}`'/>
@@ -18,7 +18,7 @@
       
       data() {
       return {
-         style: `
+         viewSize: `
             height: ${this.canvasType.height}px;
             width:  ${this.canvasType.width}px;
          `,
@@ -32,12 +32,10 @@
    .viewport {
       position: relative;
       background-color: black;
-      /* overflow-y: scroll; */
+      overflow: hidden;
    }
 
    .viewport canvas {
       position: absolute;
-      height: 100%;
-      width: 100%;
    }
 </style>
