@@ -29,7 +29,12 @@ interface IMousParams {
 export class ViewportClass {
 
    position:    IViewport;
-   mousePos:    IPosition;
+   center:      IPosition;
+   clickPos:    IPosition;
+   hoverPos:    IPosition;
+   hoverCell:   CellClass | undefined;
+   
+   isClicked:   boolean;
 
    scrollPicth: number;
    scrollMax:   number;
@@ -72,10 +77,24 @@ export class ViewportClass {
             height: canvasType.height,
          }
 
-         this.mousePos = {
+         this.center   = {
+            x: canvasType.width  /2,
+            y: canvasType.height /2,
+         }
+
+         this.clickPos  = {
             x: 0,
             y: 0,
          };
+         
+         this.hoverPos = {
+            x: 0,
+            y: 0,
+         };
+
+         this.hoverCell   = undefined;
+
+         this.isClicked   = false;
 
          this.scrollPicth = 20,
          this.scrollMax   = 350,
@@ -102,12 +121,13 @@ export class ViewportClass {
 
          this.gridColor  = canvasType.gridColor;
          this.hoverColor = canvasType.hoverColor;
-
+         
          this.mouseEventsList = {
             enter:  "mouseenter",
             leave:  "mouseleave",
             move:   "mousemove",
             down:   "mousedown",
+            up:     "mouseup",
             scroll: "wheel",
          };
       }
@@ -115,7 +135,6 @@ export class ViewportClass {
    
    init() {
       
-      // this.centerVP();
       this.initGrid();
       this.initCanvas();
       this.initMouse();
@@ -125,28 +144,25 @@ export class ViewportClass {
       // this.saveSchemasToLS();
    }
 
-   centerVP() {
-      this.position.x = Math.floor((this.columns *this.cellSize -this.position.width)  *0.5);
-      this.position.y = Math.floor((this.rows    *this.cellSize -this.position.height) *0.5);
+   toGridCenter() {
+      this.position.x = Math.floor((this.columns *this.cellSize -this.position.width)  /2);
+      this.position.y = Math.floor((this.rows    *this.cellSize -this.position.height) /2);
    }
 
    isCellInView(
-      cellX:    number,
-      cellY:    number,
-      cellSize: number,
-      vpX:      number,
-      vpY:      number,
-      vpWidth:  number,
-      vpHeight: number,
+      x:      number,
+      y:      number,
+      width:  number,
+      height: number,
+      size:   number,
    ) {
 
-      // Cell outside of the grid
+      // Cell inside of the grid
       return(
-         cellX -vpX < vpWidth
-      && cellY -vpY < vpHeight
-      && cellX -vpX > -cellSize
-      && cellY -vpY > -cellSize)
-
+         x <= width
+      && y <= height
+      && x >= size
+      && y >= size)
    }
 
    saveSchemasToLS() {
@@ -292,25 +308,28 @@ export class ViewportClass {
       drawOneSprite: Function,
    ) {
 
-      const tileSize   = this.sprite.size;
-      const tileImg    = this.sprite.img;
-      const cellSize   = this.scrollSize;
+      const tileSize = this.sprite.size;
+      const tileImg  = this.sprite.img;
+      const cellSize = this.scrollSize;
       
       const {
          x:      vpX,
          y:      vpY,
          height: vpHeight,
          width:  vpWidth,
-      } = this.position;
+      }: IViewport = this.position;
 
       this.cycleGrid((cell: CellClass) => {
          const [[cellX, cellY]]: number[][] = cell.setPosition(cellSize);
+         
+         const x = cellX -vpX;
+         const y = cellY -vpY;
 
-         if(!this.isCellInView(cellX, cellY, cellSize, vpX, vpY, vpWidth, vpHeight)) return;
+         if(!this.isCellInView(x, y, vpWidth, vpHeight, -cellSize)) return;
          
          const destination = {
-            dX: cellX -vpX,
-            dY: cellY -vpY,
+            dX: x,
+            dY: y,
             dW: cellSize,
             dH: cellSize,
          }
@@ -361,34 +380,10 @@ export class ViewportClass {
    ) {
 
       this.clearCanvas(selectCtx);
+      
+      if(this.hoverCell === undefined) return;
+
       this.renderHoverCell(selectCtx);
-   }
-   
-   getMousePos(event: MouseEvent, viewBound: DOMRect) {
-      return {
-         x: Math.floor(event.clientX +this.position.x -viewBound.left) as number,
-         y: Math.floor(event.clientY +this.position.y -viewBound.top ) as number,
-      };
-   }
-   
-   getHoverCell() {
-      
-      const cellSize: number = this.scrollSize;
-      const { x: mouseX, y: mouseY }: IPosition = this.mousePos;
-
-      const { x: cellX,  y: cellY }:  IPosition = {
-         x: mouseX - (mouseX % cellSize),
-         y: mouseY - (mouseY % cellSize),
-      };
-      
-      const cellID: string  = `${cellX /cellSize}-${cellY /cellSize}`;
-      let cell: CellClass | undefined;
-
-      this.cellsList.get(cellID) !== undefined
-      ? cell = this.cellsList.get(cellID)
-      : cell = undefined;
-      
-      if(cell) return cell.position;
    }
 
    renderHoverCell(
@@ -399,18 +394,10 @@ export class ViewportClass {
       const fillSize:   number = 6;
       const cellSize:   number = this.scrollSize;
       
-      const hoverCell: IPosition | undefined = this.getHoverCell();
-      if(hoverCell === undefined) return;
-      const { x: cellX, y: cellY } = hoverCell;
+      if(this.hoverCell === undefined) return
 
-      const {
-         x:      vpX,
-         y:      vpY,
-         height: vpHeight,
-         width:  vpWidth,
-      }:IViewport = this.position;
-
-      if(!this.isCellInView(cellX, cellY, cellSize, vpX, vpY, vpWidth, vpHeight)) return;
+      const { x: cellX, y: cellY } = this.hoverCell.position;
+      const { x: vpX,   y: vpY   } = this.position;
 
       const destination = {
          dX: cellX -vpX,
@@ -430,6 +417,106 @@ export class ViewportClass {
          ctx: selectCtx,
          ...destination,
       }, this.hoverColor, fillSize);
+   }
+
+
+   // Mouse Behaviors
+   mouseEnter() {
+      console.log("Mouse Enter !"); // ******************************************************      
+   }
+
+   mouseLeave(ctx: CanvasRenderingContext2D) {
+      
+      this.clearCanvas(ctx);
+      this.isClicked = false;
+   }
+
+   mouseMove(
+      event:     MouseEvent,
+      viewBound: DOMRect,
+      selectCtx: CanvasRenderingContext2D,
+   ) {
+
+      this.moveGrid();
+      
+      this.getMousePosition(event, viewBound);
+      this.refreshHoverCell(selectCtx);
+      this.refreshSprites();
+   }
+   
+   mouseClick(event: MouseEvent, eventName: string) {
+
+      // Left Click
+      if(event.which === 1) {
+
+         if(eventName === this.mouseEventsList.down) {
+            // this.saveSchemasToLS();
+            this.isClicked = true;
+            this.clickPos = this.hoverPos;
+         }
+
+         if(eventName === this.mouseEventsList.up) {
+            this.isClicked = false;
+         }
+      }
+
+      // Right Click
+      if(event.which === 3) {
+
+      }
+
+      // Scroll Click
+      if(event.which === 2) {
+
+         this.scrollSize = this.cellSize;
+         this.refreshSprites();
+      }
+   }
+
+   mouseScroll(
+      event:     WheelEvent,
+      selectCtx: CanvasRenderingContext2D,
+   ) {
+      
+      const scrollPicth: number = this.scrollPicth;
+
+      const { x: mouseX,  y: mouseY  } = this.hoverPos;
+      const { x: centerX, y: centerY } = this.center;
+
+      // ***** TEST *****
+      const { x: offX, y: offY} = {
+         x: mouseX -centerX +scrollPicth,
+         y: mouseY -centerY +scrollPicth,
+      }
+      // ***** TEST *****
+      
+      
+      // Zoom
+      if(event.deltaY < 0) {
+         
+         if(this.scrollSize >= this.scrollMax) return;
+         this.scrollSize += scrollPicth;
+         
+         // ***** TEST *****
+         this.position.x += offX;
+         this.position.y += offY;
+         // ***** TEST *****
+      }
+      
+      // Unzoom
+      else {
+         
+         if(this.scrollSize <= scrollPicth) return;
+         this.scrollSize -= scrollPicth;
+         
+         // ***** TEST *****
+         this.position.x -= offX;
+         this.position.y -= offY;
+         // ***** TEST *****
+      }
+
+      this.refreshSprites();
+      this.refreshHoverCell(selectCtx);
    }
 
 
@@ -466,126 +553,120 @@ export class ViewportClass {
 
       switch(eventName) {
 
-         case eventsList.enter:  this.mouseEnter();
+         case eventsList.enter:
+            this.mouseEnter();
          break;
          
-         case eventsList.leave:  this.mouseLeave(selectCtx);
+         case eventsList.leave:
+            this.mouseLeave(selectCtx);
          break;
 
-         case eventsList.move:   this.mouseMove(event, viewBound, selectCtx);
+         case eventsList.move:
+            this.mouseMove(event, viewBound, selectCtx);
          break;
 
-         case eventsList.down:   this.mouseClick(event);
+         case eventsList.down:
+            this.mouseClick(event, eventName);
          break;
 
-         case eventsList.scroll: this.mouseScroll(event, selectCtx);
+         case eventsList.up:
+            this.mouseClick(event, eventName);
+         break;
+
+         case eventsList.scroll:
+            this.mouseScroll(event, selectCtx);
          break;
       }
    }
 
-   mouseEnter() {
-      console.log("Mouse Enter !"); // ******************************************************      
-   }
+   getMousePosition(event: MouseEvent, viewBound: DOMRect) {
 
-   mouseLeave(ctx: CanvasRenderingContext2D) {
-      this.clearCanvas(ctx);
-   }
+      let mousePos: IPosition;
+      let cell:     CellClass | undefined;
 
-   mouseMove(
-      event:     MouseEvent,
-      viewBound: DOMRect,
-      selectCtx: CanvasRenderingContext2D,
-   ) {
-
-      this.mousePos = this.getMousePos(event, viewBound);
-      this.refreshHoverCell(selectCtx);
-   }
-   
-   mouseClick(event: MouseEvent) {
-
-      // Left Click
-      if(event.which === 1) {
-
-         // this.saveSchemasToLS();
-      }
-
-      // Right Click
-      if(event.which === 3) {
-
-      }
-
-      // Scroll Click
-      if(event.which === 2) {
-
-         this.scrollSize = this.cellSize;
-         this.refreshSprites();
-      }
-   }
-
-   mouseScroll(
-      event:     WheelEvent,
-      selectCtx: CanvasRenderingContext2D,
-   ) {
+      const cellSize: number = this.scrollSize;
       
-      // Zoom
-      if(event.deltaY < 0) {
+      // Mouse Position
+      const { x: mouseX, y: mouseY }  = mousePos = {
+         x: Math.floor(event.clientX +this.position.x -viewBound.left) as number,
+         y: Math.floor(event.clientY +this.position.y -viewBound.top ) as number,
+      };
 
-         if(this.scrollSize >= this.scrollMax) return;
-         this.scrollSize += this.scrollPicth;
+      // Cell Position
+      const { x: colID,  y: rowID  }: IPosition = {
+         x: (mouseX - Math.abs(mouseX % cellSize)) /cellSize,
+         y: (mouseY - Math.abs(mouseY % cellSize)) /cellSize,
+      };
+
+      if(!this.isCellInView(colID, rowID, this.columns, this.rows, 0)) {
+         cell = undefined;
       }
-   
-      // Unzoom
+
       else {
-
-         if(this.scrollSize <= this.scrollPicth) return;
-         this.scrollSize -= this.scrollPicth;
+         const cellID: string  = `${colID}-${rowID}`;      
+         cell = this.cellsList.get(cellID);
       }
 
-      // const hoverCell: IPosition | undefined = this.getHoverCell();
-      // if(hoverCell === undefined) return;
-      // const { x: cellX, y: cellY } = hoverCell;
-      
-      // this.position.x = cellX;
-      // this.position.y = cellY;
-
-      this.refreshSprites();
-      this.refreshHoverCell(selectCtx);
+      this.hoverPos  = mousePos;
+      this.hoverCell = cell;
    }
 
+   moveGrid() {
 
+      if(!this.isClicked) return;
 
-   TestScollCam() {
+      const { x: vpX,     y: vpY     }: IViewport = this.position;
+      const { x: centerX, y: centerY }: IPosition = this.center;
+      const { x: mouseX,  y: mouseY  }: IPosition = this.hoverPos;
+      const { x: clickX,  y: clickY  }: IPosition = this.clickPos;
 
-      const pitch = 10;
-
-      const movements = {
-         up:    false,
-         down:  false,
-         left:  false,
-         right: false,
+      const { x: mouseOffsetX, y: mouseOffsetY} = {
+         x: mouseX -clickX,
+         y: mouseY -clickY,
       }
 
-      window.addEventListener("keydown", (event) => {
+      const { x: vpOffsetX, y: vpOffsetY} = {
+         x: centerX +vpX,
+         y: centerY +vpY,
+      }
 
-         if(event.key === "z") movements.up    = true;
-         if(event.key === "s") movements.down  = true;
-         if(event.key === "q") movements.left  = true;
-         if(event.key === "d") movements.right = true;
+      this.moveX(vpOffsetX, mouseOffsetX);
+      this.moveY(vpOffsetY, mouseOffsetY);
+   }
 
-         if(movements.up)    this.position.y += pitch;
-         if(movements.down)  this.position.y -= pitch;
-         if(movements.left)  this.position.x += pitch;
-         if(movements.right) this.position.x -= pitch;
-         
-         this.refreshSprites();
-      });
+   moveX(
+      vpOffsetX:    number,
+      mouseOffsetX: number,
+   ) {
 
-      window.addEventListener("keydown", (event) => {
+      if(mouseOffsetX > 0
+      && vpOffsetX    < 0) {
+         return
+      }
+      
+      if(mouseOffsetX < 0
+      && vpOffsetX    > this.columns *this.scrollSize) {
+         return
+      }
 
-         if(event.key === "z") movements.up    = false;
-         if(event.key === "s") movements.down  = false;
-         if(event.key === "q") movements.left  = false;
-         if(event.key === "d") movements.right = false;
-      });
+      this.position.x -= mouseOffsetX;
+   }
+
+   moveY(
+      vpOffsetY:    number,
+      mouseOffsetY: number,
+   ) {
+
+      if(mouseOffsetY > 0
+      && vpOffsetY    < 0) {
+         return
+      }
+      
+      if(mouseOffsetY < 0
+      && vpOffsetY    > this.rows *this.scrollSize) {
+         return
+      }
+
+      this.position.y -= mouseOffsetY;
    }
 }

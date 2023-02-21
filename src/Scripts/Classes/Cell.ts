@@ -58,8 +58,8 @@ export class CellClass {
    ) {
 
       let center = [
-         this.center.x = Math.floor(posX + cellSize *0.5), // centerX
-         this.center.y = Math.floor(posY + cellSize *0.5), // centerY
+         this.center.x = Math.floor(posX + cellSize /2), // centerX
+         this.center.y = Math.floor(posY + cellSize /2), // centerY
       ];
 
       return center;

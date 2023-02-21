@@ -95,8 +95,6 @@ const methods = {
       TileSprite.img.addEventListener("load", () => {
          // SheetVP.init();
          MapVP.init();
-
-         MapVP.TestScollCam();
       });
    },
 
