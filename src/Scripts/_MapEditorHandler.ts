@@ -95,6 +95,11 @@ const methods = {
       TileSprite.img.addEventListener("load", () => {
          // SheetVP.init();
          MapVP.init();
+
+         // ***** Tempory *****
+         DOM.centerBtn.addEventListener("click", () => {
+            MapVP.toGridCenter();
+         });
       });
    },
 

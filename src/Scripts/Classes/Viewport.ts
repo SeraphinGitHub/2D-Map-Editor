@@ -123,12 +123,12 @@ export class ViewportClass {
          this.hoverColor = canvasType.hoverColor;
          
          this.mouseEventsList = {
-            enter:  "mouseenter",
-            leave:  "mouseleave",
-            move:   "mousemove",
             down:   "mousedown",
             up:     "mouseup",
+            move:   "mousemove",
             scroll: "wheel",
+            enter:  "mouseenter",
+            leave:  "mouseleave",
          };
       }
    }
@@ -142,11 +142,6 @@ export class ViewportClass {
 
       // ***** Tempory *****
       // this.saveSchemasToLS();
-   }
-
-   toGridCenter() {
-      this.position.x = Math.floor((this.columns *this.cellSize -this.position.width)  /2);
-      this.position.y = Math.floor((this.rows    *this.cellSize -this.position.height) /2);
    }
 
    isCellInView(
@@ -421,29 +416,6 @@ export class ViewportClass {
 
 
    // Mouse Behaviors
-   mouseEnter() {
-      console.log("Mouse Enter !"); // ******************************************************      
-   }
-
-   mouseLeave(ctx: CanvasRenderingContext2D) {
-      
-      this.clearCanvas(ctx);
-      this.isClicked = false;
-   }
-
-   mouseMove(
-      event:     MouseEvent,
-      viewBound: DOMRect,
-      selectCtx: CanvasRenderingContext2D,
-   ) {
-
-      this.moveGrid();
-      
-      this.getMousePosition(event, viewBound);
-      this.refreshHoverCell(selectCtx);
-      this.refreshSprites();
-   }
-   
    mouseClick(event: MouseEvent, eventName: string) {
 
       // Left Click
@@ -453,6 +425,8 @@ export class ViewportClass {
             // this.saveSchemasToLS();
             this.isClicked = true;
             this.clickPos = this.hoverPos;
+
+            this.TEST_AssignTileType(); // <== ***** Tempory *****
          }
 
          if(eventName === this.mouseEventsList.up) {
@@ -468,9 +442,21 @@ export class ViewportClass {
       // Scroll Click
       if(event.which === 2) {
 
-         this.scrollSize = this.cellSize;
+         this.zoomReset();
          this.refreshSprites();
       }
+   }
+
+   mouseMove(
+      event:     MouseEvent,
+      viewBound: DOMRect,
+      selectCtx: CanvasRenderingContext2D,
+   ) {
+
+      this.moveGrid();
+      this.getMousePosition(event, viewBound);
+      this.refreshHoverCell(selectCtx);
+      this.refreshSprites();
    }
 
    mouseScroll(
@@ -478,45 +464,29 @@ export class ViewportClass {
       selectCtx: CanvasRenderingContext2D,
    ) {
       
-      const scrollPicth: number = this.scrollPicth;
-
-      const { x: mouseX,  y: mouseY  } = this.hoverPos;
-      const { x: centerX, y: centerY } = this.center;
-
-      // ***** TEST *****
-      const { x: offX, y: offY} = {
-         x: mouseX -centerX +scrollPicth,
-         y: mouseY -centerY +scrollPicth,
-      }
-      // ***** TEST *****
+      const scrollPicth:      number    = this.scrollPicth;
+      const { colID, rowID }: CellClass = this.hoverCell!;
       
-      
-      // Zoom
+      // Zoom In
       if(event.deltaY < 0) {
-         
-         if(this.scrollSize >= this.scrollMax) return;
-         this.scrollSize += scrollPicth;
-         
-         // ***** TEST *****
-         this.position.x += offX;
-         this.position.y += offY;
-         // ***** TEST *****
+         this.zoom(colID, rowID, scrollPicth, this.scrollMax);
       }
       
-      // Unzoom
-      else {
-         
-         if(this.scrollSize <= scrollPicth) return;
-         this.scrollSize -= scrollPicth;
-         
-         // ***** TEST *****
-         this.position.x -= offX;
-         this.position.y -= offY;
-         // ***** TEST *****
-      }
+      // Zoom Out
+      else this.zoom(colID, rowID, -scrollPicth, scrollPicth);
 
       this.refreshSprites();
       this.refreshHoverCell(selectCtx);
+   }
+
+   mouseEnter() {
+      console.log("Mouse Enter !"); // ******************************************************      
+   }
+
+   mouseLeave(ctx: CanvasRenderingContext2D) {
+      
+      this.clearCanvas(ctx);
+      this.isClicked = false;
    }
 
 
@@ -553,18 +523,6 @@ export class ViewportClass {
 
       switch(eventName) {
 
-         case eventsList.enter:
-            this.mouseEnter();
-         break;
-         
-         case eventsList.leave:
-            this.mouseLeave(selectCtx);
-         break;
-
-         case eventsList.move:
-            this.mouseMove(event, viewBound, selectCtx);
-         break;
-
          case eventsList.down:
             this.mouseClick(event, eventName);
          break;
@@ -573,39 +531,52 @@ export class ViewportClass {
             this.mouseClick(event, eventName);
          break;
 
+         case eventsList.move:
+            this.mouseMove(event, viewBound, selectCtx);
+         break;
+
          case eventsList.scroll:
             this.mouseScroll(event, selectCtx);
+         break;
+
+         case eventsList.enter:
+            this.mouseEnter();
+         break;
+         
+         case eventsList.leave:
+            this.mouseLeave(selectCtx);
          break;
       }
    }
 
    getMousePosition(event: MouseEvent, viewBound: DOMRect) {
 
-      let mousePos: IPosition;
-      let cell:     CellClass | undefined;
-
-      const cellSize: number = this.scrollSize;
-      
       // Mouse Position
-      const { x: mouseX, y: mouseY }  = mousePos = {
+      let mousePos;
+      let { x: mouseX, y: mouseY }: IPosition = mousePos = {
          x: Math.floor(event.clientX +this.position.x -viewBound.left) as number,
          y: Math.floor(event.clientY +this.position.y -viewBound.top ) as number,
       };
 
+      if(this.isClicked) {
+         mouseX = this.clickPos.x;   
+         mouseY = this.clickPos.y;
+      }
+      
       // Cell Position
-      const { x: colID,  y: rowID  }: IPosition = {
+      const cellSize: number = this.scrollSize;
+      const { x: colID, y: rowID }: IPosition = {
          x: (mouseX - Math.abs(mouseX % cellSize)) /cellSize,
          y: (mouseY - Math.abs(mouseY % cellSize)) /cellSize,
       };
 
-      if(!this.isCellInView(colID, rowID, this.columns, this.rows, 0)) {
-         cell = undefined;
-      }
+      let cell: CellClass | undefined;
 
-      else {
-         const cellID: string  = `${colID}-${rowID}`;      
+      if(this.isCellInView(colID, rowID, this.columns, this.rows, 0)) {
+         const cellID: string = `${colID}-${rowID}`;      
          cell = this.cellsList.get(cellID);
       }
+      else cell = undefined;
 
       this.hoverPos  = mousePos;
       this.hoverCell = cell;
@@ -626,47 +597,79 @@ export class ViewportClass {
       }
 
       const { x: vpOffsetX, y: vpOffsetY} = {
-         x: centerX +vpX,
-         y: centerY +vpY,
+         x: vpX +centerX,
+         y: vpY +centerY,
       }
 
-      this.moveX(vpOffsetX, mouseOffsetX);
-      this.moveY(vpOffsetY, mouseOffsetY);
+      this.position.x -= this.moveAxis(vpOffsetX, mouseOffsetX, this.columns)!;
+      this.position.y -= this.moveAxis(vpOffsetY, mouseOffsetY, this.rows)!;
    }
 
-   moveX(
-      vpOffsetX:    number,
-      mouseOffsetX: number,
+   moveAxis(
+      vpOffset:    number,
+      mouseOffset: number,
+      limit:       number,
    ) {
 
-      if(mouseOffsetX > 0
-      && vpOffsetX    < 0) {
-         return
-      }
-      
-      if(mouseOffsetX < 0
-      && vpOffsetX    > this.columns *this.scrollSize) {
-         return
+      if(mouseOffset > 0 && vpOffset < 0
+      || mouseOffset < 0 && vpOffset > limit *this.scrollSize) {
+
+         return 0;
       }
 
-      this.position.x -= mouseOffsetX;
+      return mouseOffset;
    }
 
-   moveY(
-      vpOffsetY:    number,
-      mouseOffsetY: number,
+   zoom(
+      colID:    number,
+      rowID:    number,
+      picth:    number,
+      maxPicth: number,
    ) {
 
-      if(mouseOffsetY > 0
-      && vpOffsetY    < 0) {
-         return
-      }
-      
-      if(mouseOffsetY < 0
-      && vpOffsetY    > this.rows *this.scrollSize) {
-         return
-      }
+      const scrollRange = maxPicth -this.scrollSize;
+      const minLimit    = picth > 0 && scrollRange <= 0;
+      const maxLimit    = picth < 0 && scrollRange >= 0;
 
-      this.position.y -= mouseOffsetY;
+      if(minLimit || maxLimit) return;
+      
+      this.scrollSize += picth;
+      this.position.x += picth *(colID +1/2);
+      this.position.y += picth *(rowID +1/2);
+   }
+
+   zoomReset() {
+      this.scrollSize = this.cellSize;
+   }
+
+   toGridCenter() {
+      this.position.x = Math.floor((this.columns *this.scrollSize -this.position.width)  /2);
+      this.position.y = Math.floor((this.rows    *this.scrollSize -this.position.height) /2);
+
+      this.refreshSprites();
+   }
+
+
+
+
+   TEST_AssignTileType() {
+      
+      if(this.hoverCell === undefined) return;
+
+      // const tileType = [2,0];
+      const tileType = [2,6];
+      const [ spriteX, spriteY ] = tileType;
+      const [ tileX,   tileY   ] = this.hoverCell.tileIndex;
+
+
+      if(spriteX !== tileX
+      || spriteY !== tileY) {
+         this.hoverCell.tileIndex = tileType;
+      }
+      else this.hoverCell.tileIndex = [];
+
+      console.log(this.hoverCell.tileIndex); // ******************************************************
+
+      this.refreshSprites();
    }
 }

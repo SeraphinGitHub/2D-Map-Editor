@@ -2,6 +2,10 @@
 <template>
    <section class="Flex app" id="root">
 
+      <!-- /* ***** Tempory ***** */ -->
+      <button class="center-btn">Center Grid</button>
+      <!-- /* ***** Tempory ***** */ -->
+
       <Viewport class="sheet-VP" :canvasType="this.canvasSpec.sheet"/>
       <Viewport class="map-VP"   :canvasType="this.canvasSpec.map"  />
       
@@ -28,6 +32,8 @@
          const DOM = {
             sheetVP: document.querySelector(".sheet-VP"),
             mapVP:   document.querySelector(".map-VP"),
+
+            centerBtn: document.querySelector(".center-btn"), // <== ***** Tempory *****
          };
 
          mapEditor.init(
@@ -67,6 +73,22 @@
    /* ***** Tempory ***** */
    .app {
       justify-content: space-around !important;
+   }
+   .center-btn {
+      position: absolute;
+      top: 7px;
+      right: 25%;
+      height: 50px;
+      width: 200px;
+      border: double 5px dimgray;
+      border-radius: 15px;
+      transform: translate(-50%);
+      background: linear-gradient(to bottom, dodgerblue, white, dodgerblue);
+   }
+   .center-btn:active {
+      top: 10px;
+      right: 24.7%;
+      background: linear-gradient(to bottom, darkviolet, white, darkviolet);
    }
    /* ***** Tempory ***** */
 
