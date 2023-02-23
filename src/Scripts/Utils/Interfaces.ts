@@ -1,15 +1,5 @@
 
-export interface IConstantes {
-   [key: string]: IGrid,
-}
-
-export interface IGrid {
-   CELL_SIZE:    number,
-   COLUMNS:      number,
-   ROWS:         number,
-   TILES_SCHEMA: number[][],
-   ITEMS_SCHEMA: number[][],
-}
+export interface IViewport extends IPosition, ISize {}
 
 export interface INumber {
    [key: string]: number,
@@ -32,8 +22,6 @@ export interface ISize {
    width:  number,
    height: number,
 }
-
-export interface IViewport extends IPosition, ISize {}
 
 export interface IDOM {
    [key: string]: HTMLElement,

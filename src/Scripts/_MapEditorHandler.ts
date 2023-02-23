@@ -1,12 +1,11 @@
 
 import {
-   ISize,
+   INumber,
    IDOM,
    ICanvasSpec,
 } from "./Utils/Interfaces";
 
 import { saveAs        } from "file-saver";
-import { Constantes    } from "./Utils/Constantes";
 import { ViewportClass } from "./Classes/Viewport";
 import { SpriteClass   } from "./Classes/Sprite";
 
@@ -37,7 +36,8 @@ const formatToExport = (
    const leftSplit    = rightSplit.split("]]")[0];
    const schemaIndex  = leftSplit.split("],[");
 
-   const col = Constantes.map.COLUMNS;
+   // const col = mapParams.COLUMNS;
+   const col = 8; // <== *******************************
 
    for(let i = 0; i < schemaIndex.length; i++) {
 
@@ -73,11 +73,43 @@ const exportSchema = (formatedSchema: string) => {
 }
 
 
-// enum trileState {
-//    notWalkable,
-//    walkable,
-//    safe,
-// }
+// To set Sheet
+let source      = "./tiles_0.png";
+let textureSize = 200;
+let spriteSize  = 100;
+
+
+// To set Map
+let cellSize = 100;
+let width    = 2000;
+let height   = 1500;
+
+
+const setSheetParams = (
+   img: HTMLImageElement,
+   spriteSize:  number,
+   textureSize: number,
+) => {
+   
+   return {
+      cellSize: spriteSize,
+      columns:  img.naturalWidth  /textureSize,
+      rows:     img.naturalHeight /textureSize,
+   }
+}
+
+const setMapParams = (
+   cellSize: number,
+   width:    number,
+   height:   number,
+) => {
+   
+   return {
+      cellSize: cellSize,
+      columns:  width  /cellSize,
+      rows:     height /cellSize,
+   }
+}
 
 
 // ================================================================================================
@@ -88,48 +120,38 @@ const methods = {
    init(
       DOM:        IDOM,
       canvasSpec: ICanvasSpec,
-   ) {
+   ) {      
 
-      const { TileSprite, SheetVP, MapVP } = this.initClasses(DOM, canvasSpec);
+      if(source === undefined) return;
 
-      TileSprite.img.addEventListener("load", () => {
-         // SheetVP.init();
-         MapVP.init();
+      const SpriteSheet = new SpriteClass(textureSize, source);
 
-         // ***** Tempory *****
-         DOM.centerBtn.addEventListener("click", () => {
-            MapVP.toGridCenter();
-         });
-      });
-   },
-
-   initClasses(
-      DOM:        IDOM,
-      canvasSpec: ICanvasSpec,
-   ) {
-      const TileSprite: SpriteClass = new SpriteClass(200, "./tiles_0.png");
+      const sheetParams: INumber = setSheetParams(SpriteSheet.img, spriteSize, textureSize);
+      const mapParams:   INumber = setMapParams(cellSize, width, height);
 
       const SheetVP = new ViewportClass(
-         Constantes.sheet,
-         TileSprite,
+         sheetParams,
          DOM.sheetVP,
          canvasSpec.sheet,
          sheetKey,
       );
 
       const MapVP = new ViewportClass(
-         Constantes.map,
-         TileSprite,
+         mapParams,
          DOM.mapVP,
          canvasSpec.map,
          mapKey,
       );
 
-      return {
-         TileSprite,
-         SheetVP,
-         MapVP,
-      }
+      SpriteSheet.img.addEventListener("load", () => {
+         
+         SheetVP.spriteSheet = SpriteSheet;
+         SheetVP.init();
+         SheetVP.generateSchema();
+
+         MapVP.spriteSheet = SpriteSheet;
+         MapVP.init();
+      });
    },
 }
 

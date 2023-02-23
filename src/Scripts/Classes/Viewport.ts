@@ -1,10 +1,10 @@
 
 import {
-   IGrid,
+   IViewport,
+   INumber,
    IString,
    ISchema,
    IPosition,
-   IViewport,
    ICtx,
    ICanvas,
    ICanvasSpecElem,
@@ -36,33 +36,31 @@ export class ViewportClass {
    
    isClicked:   boolean;
 
+   cellSize:    number;
+   columns:     number;
+   rows:        number;
+   cellsList:   Map<string, CellClass>;
+
    scrollPicth: number;
    scrollMax:   number;
    scrollSize:  number;
 
-   cellSize:    number;
-   columns:     number;
-   rows:        number;
+   schemaKey:   string;
    tilesSchema: number[][];
    itemsSchema: number[][];
-   schemaKey:   string;
 
-   cellsList:   Map<string, CellClass>;
 
-   sprite:      SpriteClass;
-   htmlVP:      HTMLElement;
    layers:      ICanvas;
    ctxList:     ICtx;
-   
-   layersName:  IString;
-   gridColor:   string;
+   spriteSheet: SpriteClass | undefined;
+   htmlVP:      HTMLElement;
    hoverColor:  string;
 
+   layersName:      IString;
    mouseEventsList: IString;
 
    constructor(
-      mapConst:     IGrid,
-      sprite:       SpriteClass,
+      params:       INumber,
       htmlViewport: HTMLElement,
       canvasType:   ICanvasSpecElem,
       schemaKey:    string,
@@ -82,97 +80,55 @@ export class ViewportClass {
             y: canvasType.height /2,
          }
 
-         this.clickPos  = {
-            x: 0,
-            y: 0,
-         };
-         
-         this.hoverPos = {
-            x: 0,
-            y: 0,
-         };
-
+         this.clickPos    = { x:0, y:0 };
+         this.hoverPos    = { x:0, y:0 };
          this.hoverCell   = undefined;
-
+         
          this.isClicked   = false;
+
+         this.cellSize    = params.cellSize;
+         this.columns     = params.columns;
+         this.rows        = params.rows;
+         this.cellsList   = new Map<string, CellClass>();
 
          this.scrollPicth = 20,
          this.scrollMax   = 350,
-         this.scrollSize  = mapConst.CELL_SIZE,
+         this.scrollSize  = params.cellSize,
 
-         this.cellSize    = mapConst.CELL_SIZE;
-         this.columns     = mapConst.COLUMNS;
-         this.rows        = mapConst.ROWS;
-         this.tilesSchema = mapConst.TILES_SCHEMA;
-         this.itemsSchema = mapConst.ITEMS_SCHEMA;
          this.schemaKey   = schemaKey;
+         this.tilesSchema = [];
+         this.itemsSchema = [];
 
-         this.cellsList   = new Map<string, CellClass>();
-
-         this.sprite      = sprite;
-         this.htmlVP      = htmlViewport;
          this.layers      = {};
          this.ctxList     = {};
+         this.spriteSheet = undefined;
+         this.htmlVP      = htmlViewport;
+         this.hoverColor  = canvasType.hoverColor;
 
          this.layersName = {
             sprite: canvasType.sprite,
             select: canvasType.select,
          };
-
-         this.gridColor  = canvasType.gridColor;
-         this.hoverColor = canvasType.hoverColor;
          
          this.mouseEventsList = {
             down:   "mousedown",
             up:     "mouseup",
             move:   "mousemove",
             scroll: "wheel",
-            enter:  "mouseenter",
             leave:  "mouseleave",
          };
       }
    }
    
    init() {
-      
-      this.initGrid();
+
       this.initCanvas();
+      this.initGrid();
       this.initMouse();
       this.refreshSprites();
 
       // ***** Tempory *****
-      // this.saveSchemasToLS();
-   }
-
-   isCellInView(
-      x:      number,
-      y:      number,
-      width:  number,
-      height: number,
-      size:   number,
-   ) {
-
-      // Cell inside of the grid
-      return(
-         x <= width
-      && y <= height
-      && x >= size
-      && y >= size)
-   }
-
-   saveSchemasToLS() {
-
-      const schemasGroup = {
-         tilesSchema: this.tilesSchema,
-         itemsSchema: this.itemsSchema,
-      }
-
-      const groupString = JSON.stringify(schemasGroup);
-      localStorage.setItem(this.schemaKey, groupString);
-   }
-   
-   cycleGrid(callback: Function) {
-      this.cellsList.forEach(cell => callback(cell));
+      // this.storeSchema();
    }
 
    initCanvas() {
@@ -194,6 +150,37 @@ export class ViewportClass {
    
    clearCanvas(ctx: CanvasRenderingContext2D)  {
       ctx.clearRect(0, 0, this.position.width, this.position.height);
+   }
+
+   storeSchema() {
+
+      const schemasGroup = {
+         tilesSchema: this.tilesSchema,
+         itemsSchema: this.itemsSchema,
+      }
+
+      const groupString = JSON.stringify(schemasGroup);
+      localStorage.setItem(this.schemaKey, groupString);
+   }
+
+   isCellInView(
+      x:      number,
+      y:      number,
+      width:  number,
+      height: number,
+      size:   number,
+   ) {
+
+      // Cell inside of the grid
+      return(
+         x <= width
+      && y <= height
+      && x >= size
+      && y >= size)
+   }
+   
+   cycleGrid(callback: Function) {
+      this.cellsList.forEach(cell => callback(cell));
    }
 
    drawImage(param: IDrawImage) {
@@ -223,24 +210,16 @@ export class ViewportClass {
    // Render Grid
    initGrid() {
 
-      const schemasString: string | null = localStorage.getItem(this.schemaKey);
+      this.toGridCenter();
 
-      // Render Exiting Schema
-      if(schemasString !== null) {
-      
-         const { tilesSchema, itemsSchema }: ISchema = JSON.parse(schemasString);
-         
-         if(tilesSchema.length !== 0
-         && itemsSchema.length !== 0) {
-            
-            this.tilesSchema = tilesSchema;
-            this.itemsSchema = itemsSchema;
-            this.renderGrid( this.setCellTile.bind(this) );
-         }
+      const storedSchemasStr: string | null = localStorage.getItem(this.schemaKey);
+
+      if(storedSchemasStr !== null) {
+         this.renderStoredSchema(storedSchemasStr);
+         return;
       }
       
-      // Render Empty Grid
-      else this.renderGrid( this.setEmptySchemas.bind(this) );
+      this.renderEmptySchema();
    }
    
    renderGrid(callback: Function) {
@@ -258,90 +237,127 @@ export class ViewportClass {
       }
    }
 
-   setCellTile(
-      rowID:   number,
-      colID:   number,
-      newCell: CellClass,
-   ) {
-
-      const index: number   = rowID *this.columns +colID;
-      const tile:  number[] = this.tilesSchema[index];
-      const item:  number[] = this.itemsSchema[index];
-
-      newCell.tileIndex = tile;
-      newCell.itemIndex = item;
+   renderEmptySchema() {
+      
+      this.renderGrid(() => {
+         this.tilesSchema.push([]);
+         // this.itemsSchema.push([]); // ==> TO DO Later
+      });
    }
 
-   setEmptySchemas() {
+   renderStoredSchema(storedSchemasStr: string) {
 
-      this.tilesSchema.push([]);
-      this.itemsSchema.push([]);
+      const { tilesSchema, itemsSchema }: ISchema = JSON.parse(storedSchemasStr);
+         
+      if(tilesSchema.length === 0
+      || itemsSchema.length === 0) {
+         return;
+      }
+
+      this.tilesSchema = tilesSchema;
+      // this.itemsSchema = itemsSchema; // ==> TO DO Later
+
+      this.renderSchema(() => {});
+   }
+
+   renderSchema(generate: Function) {
+      
+      this.renderGrid((
+         rowID:   number,
+         colID:   number,
+         newCell: CellClass,
+      ) => {
+         
+         const index: number   = rowID *this.columns +colID;
+         const tile:  number[] = this.tilesSchema[index];
+         // const item:  number[] = this.itemsSchema[index]; // ==> TO DO Later
+         
+         newCell.tileIndex = tile;
+         // newCell.itemIndex = item; // ==> TO DO Later
+         
+         generate(newCell, colID, rowID);
+      });
+   }
+
+   generateSchema() {
+   
+      this.renderSchema((
+         newCell: CellClass,
+         colID:   number,
+         rowID:   number,
+      ) => {
+         newCell.tileIndex = [rowID, colID];
+      });
+
+      this.refreshSprites();
    }
 
 
    // Render Sprites && Blue Grid
    refreshSprites() {
       
-      const spriteCtx = this.ctxList[this.layersName.sprite];
-      const gridGap   = 3;
-      const gapCover  = gridGap /2;
+      const spriteCtx   = this.ctxList[this.layersName.sprite];
+      const spriteSheet = this.spriteSheet;
 
-      // Clear Sprite Grid
       this.clearCanvas(spriteCtx);
       
-      // Render Sprites & Blue Grid
-      this.renderSprites(spriteCtx, this.gridColor, gridGap, this.drawOneSprite.bind(this));
-      
-      // Render Black Grid
-      this.renderSprites(spriteCtx, "black", gapCover, () => {});
+      if(spriteSheet !== undefined) {
+         const { size, img } = spriteSheet;
+         this.renderSprites(spriteCtx, this.drawSprite.bind(this), size, img);
+         return;
+      } 
+
+      this.renderSprites(spriteCtx, () => {});
    }
 
    renderSprites(
-      spriteCtx:     CanvasRenderingContext2D,
-      color:         string,
-      size:          number,
-      drawOneSprite: Function,
+      spriteCtx:  CanvasRenderingContext2D,
+      drawSprite: Function,
+      tileSize?:  number,
+      tileImg?:   HTMLImageElement,
    ) {
-
-      const tileSize = this.sprite.size;
-      const tileImg  = this.sprite.img;
-      const cellSize = this.scrollSize;
       
       const {
          x:      vpX,
          y:      vpY,
          height: vpHeight,
          width:  vpWidth,
-      }: IViewport = this.position;
+      } = this.position;
+
+      const cellSize    = this.scrollSize;
+      const offsetIn    = 1.5;
+      const offsetOut   = offsetIn *2;
+      const borderColor = "turquoise";
+      const borderSize  = 0.8;
 
       this.cycleGrid((cell: CellClass) => {
+
          const [[cellX, cellY]]: number[][] = cell.setPosition(cellSize);
-         
          const x = cellX -vpX;
          const y = cellY -vpY;
 
          if(!this.isCellInView(x, y, vpWidth, vpHeight, -cellSize)) return;
          
          const destination = {
-            dX: x,
-            dY: y,
-            dW: cellSize,
-            dH: cellSize,
+            dX: x +offsetIn,
+            dY: y +offsetIn,
+            dW: cellSize -offsetOut,
+            dH: cellSize -offsetOut
          }
 
          // Draw Sprites
-         drawOneSprite(spriteCtx, tileImg, tileSize, destination, cell.tileIndex);
-         drawOneSprite(spriteCtx, tileImg, tileSize, destination, cell.itemIndex);
+         drawSprite(spriteCtx, tileImg, tileSize, destination, cell.tileIndex);
+         // drawOneSprite(spriteCtx, tileImg, tileSize, destination, cell.itemIndex); // ==> TO DO Later
          
          // Draw Grid Color
          this.strokeRect({
             ctx: spriteCtx,
             ...destination,
-         }, color, size);
+         }, borderColor, borderSize);
       });
    }
 
-   drawOneSprite(
+   drawSprite(
       spriteCtx:   CanvasRenderingContext2D,
       tileImg:     HTMLImageElement,
       tileSize:    number,
@@ -422,11 +438,11 @@ export class ViewportClass {
       if(event.which === 1) {
 
          if(eventName === this.mouseEventsList.down) {
-            // this.saveSchemasToLS();
+            // this.storeSchema();
             this.isClicked = true;
             this.clickPos = this.hoverPos;
 
-            this.TEST_AssignTileType(); // <== ***** Tempory *****
+            // this.TEST_AssignTileType(); // <== ***** Tempory *****
          }
 
          if(eventName === this.mouseEventsList.up) {
@@ -453,10 +469,9 @@ export class ViewportClass {
       selectCtx: CanvasRenderingContext2D,
    ) {
 
-      this.moveGrid();
       this.getMousePosition(event, viewBound);
+      this.moveGrid();
       this.refreshHoverCell(selectCtx);
-      this.refreshSprites();
    }
 
    mouseScroll(
@@ -477,10 +492,6 @@ export class ViewportClass {
 
       this.refreshSprites();
       this.refreshHoverCell(selectCtx);
-   }
-
-   mouseEnter() {
-      console.log("Mouse Enter !"); // ******************************************************      
    }
 
    mouseLeave(ctx: CanvasRenderingContext2D) {
@@ -537,10 +548,6 @@ export class ViewportClass {
 
          case eventsList.scroll:
             this.mouseScroll(event, selectCtx);
-         break;
-
-         case eventsList.enter:
-            this.mouseEnter();
          break;
          
          case eventsList.leave:
@@ -603,6 +610,8 @@ export class ViewportClass {
 
       this.position.x -= this.moveAxis(vpOffsetX, mouseOffsetX, this.columns)!;
       this.position.y -= this.moveAxis(vpOffsetY, mouseOffsetY, this.rows)!;
+
+      this.refreshSprites();
    }
 
    moveAxis(
@@ -640,13 +649,12 @@ export class ViewportClass {
 
    zoomReset() {
       this.scrollSize = this.cellSize;
+      this.toGridCenter();
    }
 
    toGridCenter() {
       this.position.x = Math.floor((this.columns *this.scrollSize -this.position.width)  /2);
       this.position.y = Math.floor((this.rows    *this.scrollSize -this.position.height) /2);
-
-      this.refreshSprites();
    }
 
 
@@ -668,8 +676,18 @@ export class ViewportClass {
       }
       else this.hoverCell.tileIndex = [];
 
-      console.log(this.hoverCell.tileIndex); // ******************************************************
+      const tileSize = this.spriteSheet!.size;
+      const tileImg  = this.spriteSheet!.img;
+      const cellSize = this.scrollSize;
+      const spriteCtx = this.ctxList[this.layersName.sprite];
 
-      this.refreshSprites();
+      const destination = {
+         dX: this.hoverCell.position.x -this.position.x,
+         dY: this.hoverCell.position.y -this.position.y,
+         dW: cellSize,
+         dH: cellSize,
+      }
+
+      this.drawSprite(spriteCtx, tileImg, tileSize, destination, tileType);
    }
 }
