@@ -2,8 +2,8 @@
 <template>
    <section :style="viewSize" :class='`Flex viewport`'>
 
-      <canvas :class='`canvas-${this.canvasType.sprite}`'/>
-      <canvas :class='`canvas-${this.canvasType.select}`'/>
+      <canvas :class='`canvas-${this.grid.properties.name}-sprite`'/>
+      <canvas :class='`canvas-${this.grid.properties.name}-select`'/>
 
    </section>
 </template>
@@ -13,14 +13,15 @@
 
    export default {
       props: {
-         canvasType: Object,
+         grid: Object,
       },
       
       data() {
       return {
+
          viewSize: `
-            height: ${this.canvasType.height}px;
-            width:  ${this.canvasType.width}px;
+            height: ${this.grid.properties.height}px;
+            width:  ${this.grid.properties.width}px;
          `,
       }},
    }

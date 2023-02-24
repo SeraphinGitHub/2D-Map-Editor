@@ -1,13 +1,34 @@
 
 import {
-   INumber,
    IDOM,
-   ICanvasSpec,
 } from "./Utils/Interfaces";
 
 import { saveAs        } from "file-saver";
-import { ViewportClass } from "./Classes/Viewport";
 import { SpriteClass   } from "./Classes/Sprite";
+import { ViewportClass } from "./Classes/Viewport";
+
+/** Mouse Binds
+ * 
+ * Left click:   Set tile
+ * Right click:  Delete tile
+ * Scroll click: Move grid
+ * Scroll front: Zoom In
+ * Scroll back:  Zoom Out
+ * 
+*/
+
+/** Keyboard Binds
+ * 
+ * Escape: Toggle grid
+ * 1 (&):  Test draw line **********
+ * 
+*/
+
+/** Combinations
+ * 
+ * Ctrl + Scroll Click: Reset zoom + center grid
+ * 
+*/
 
 
 // ================================================================================================
@@ -15,18 +36,18 @@ import { SpriteClass   } from "./Classes/Sprite";
 // ================================================================================================
 const mapKey:      string = "storedMap";
 const sheetKey:    string = "storedSheet";
+let exportVarName: string = "TileMapSchema";
+let pressedKey:    string | undefined = undefined;
 
-let exportVarName: string = "Tile_Map_2D";
 
 document.body.oncontextmenu = (event: MouseEvent) => {
    event.preventDefault();
    event.stopPropagation();
 }
 
-
 const formatToExport = (
-   varName: string,
-   schema:  number[][]
+   mapColumns: number,
+   schema:     number[][]
 ) => {
    
    let resultArray = [];
@@ -36,9 +57,6 @@ const formatToExport = (
    const leftSplit    = rightSplit.split("]]")[0];
    const schemaIndex  = leftSplit.split("],[");
 
-   // const col = mapParams.COLUMNS;
-   const col = 8; // <== *******************************
-
    for(let i = 0; i < schemaIndex.length; i++) {
 
       let index = schemaIndex[i];
@@ -47,7 +65,7 @@ const formatToExport = (
       if(index === "") checkedIndex = "   ";
       else checkedIndex = index;
 
-      if((i +1) % col === 0 && i !== schemaIndex.length -1) {
+      if((i +1) % mapColumns === 0 && i !== schemaIndex.length -1) {
          resultArray.push(`${checkedIndex}],\n   [`);
       }
 
@@ -59,7 +77,7 @@ const formatToExport = (
    }
 
    const result       = resultArray.join("");
-   const exportString = `const ${varName} = [\n   [${result}],\n];`
+   const exportString = `const ${exportVarName} = [\n   [${result}],\n];`
 
    return exportString;
 }
@@ -72,43 +90,74 @@ const exportSchema = (formatedSchema: string) => {
    saveAs(file, name);
 }
 
-
-// To set Sheet
-let source      = "./tiles_0.png";
-let textureSize = 200;
-let spriteSize  = 100;
-
-
-// To set Map
-let cellSize = 100;
-let width    = 2000;
-let height   = 1500;
-
-
 const setSheetParams = (
-   img: HTMLImageElement,
-   spriteSize:  number,
-   textureSize: number,
+   properties:  any,
+   SpriteSheet: SpriteClass,
 ) => {
-   
+   const { img, textureSize, spriteSize } = SpriteSheet;
+
    return {
+      ...properties,
+
       cellSize: spriteSize,
-      columns:  img.naturalWidth  /textureSize,
-      rows:     img.naturalHeight /textureSize,
+      columns:  Math.floor(img.naturalWidth  /textureSize),
+      rows:     Math.floor(img.naturalHeight /textureSize),
    }
 }
 
 const setMapParams = (
-   cellSize: number,
-   width:    number,
-   height:   number,
+   properties: any,
+   settings:   any,
 ) => {
    
+   const { cellSize, worldWidth, worldHeight } = settings;
+
    return {
+      ...properties,
+
       cellSize: cellSize,
-      columns:  width  /cellSize,
-      rows:     height /cellSize,
+      columns:  Math.floor(worldWidth  /cellSize),
+      rows:     Math.floor(worldHeight /cellSize),
    }
+}
+
+const zoomPrevent = () => {
+   
+   window.addEventListener("wheel", (event) => {
+      if(pressedKey === "Control") event.preventDefault();
+
+   }, { passive: false });
+}
+
+const keysPrevent = (event: KeyboardEvent) => {
+   
+   if(event.key === "'") {
+      event.preventDefault();
+   }
+}
+
+const initKeyboard = (
+   SheetGrid: ViewportClass,
+   MapGrid:   ViewportClass,
+) => {
+
+   window.addEventListener("keydown", (event) => {
+
+      keysPrevent(event);
+
+      pressedKey = event.key;
+      SheetGrid.pressedKey = pressedKey;
+      MapGrid.pressedKey   = pressedKey;
+
+      MapGrid.handlePressedKeys();
+   });
+      
+   window.addEventListener("keyup", () => {
+
+      pressedKey = undefined;
+      SheetGrid.pressedKey = pressedKey;
+      MapGrid.pressedKey   = pressedKey;
+   });
 }
 
 
@@ -118,39 +167,40 @@ const setMapParams = (
 const methods = {
    
    init(
-      DOM:        IDOM,
-      canvasSpec: ICanvasSpec,
-   ) {      
+      DOM:   IDOM,
+      sheet: any,
+      map:   any,
+   ) {
 
-      if(source === undefined) return;
+      if(sheet.settings.source === undefined) return;
 
-      const SpriteSheet = new SpriteClass(textureSize, source);
+      const SpriteSheet = new SpriteClass(sheet.settings);
+      const sheetParams = setSheetParams(sheet.properties, SpriteSheet);
+      const mapParams   = setMapParams(map.properties, map.settings);
 
-      const sheetParams: INumber = setSheetParams(SpriteSheet.img, spriteSize, textureSize);
-      const mapParams:   INumber = setMapParams(cellSize, width, height);
-
-      const SheetVP = new ViewportClass(
+      const SheetGrid = new ViewportClass(
          sheetParams,
          DOM.sheetVP,
-         canvasSpec.sheet,
          sheetKey,
       );
 
-      const MapVP = new ViewportClass(
+      const MapGrid = new ViewportClass(
          mapParams,
          DOM.mapVP,
-         canvasSpec.map,
          mapKey,
       );
 
       SpriteSheet.img.addEventListener("load", () => {
          
-         SheetVP.spriteSheet = SpriteSheet;
-         SheetVP.init();
-         SheetVP.generateSchema();
+         zoomPrevent();
+         initKeyboard(SheetGrid, MapGrid);
 
-         MapVP.spriteSheet = SpriteSheet;
-         MapVP.init();
+         SheetGrid.spriteSheet = SpriteSheet;
+         SheetGrid.init();
+         SheetGrid.generateSchema();
+   
+         MapGrid.spriteSheet = SpriteSheet;
+         MapGrid.init();
       });
    },
 }

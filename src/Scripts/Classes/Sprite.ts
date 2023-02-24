@@ -4,18 +4,17 @@
 // =====================================================================
 export class SpriteClass {
 
-   size: number;
-   src:  string;
-   img:  HTMLImageElement;
+   img:         HTMLImageElement;
+   textureSize: number;
+   spriteSize:  number;
 
    constructor(
-      size: number,
-      src:  string,
+      settings: any,
    ) {
 
-      this.size    = size;
-      this.src     = src;
-      this.img     = new Image();
-      this.img.src = src;
+      this.img         = new Image();
+      this.img.src     = settings.source;
+      this.textureSize = settings.textureSize;
+      this.spriteSize  = settings.spriteSize;
    }
 }

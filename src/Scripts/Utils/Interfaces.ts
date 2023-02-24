@@ -31,17 +31,6 @@ export interface ICanvas {
    [key: string]: HTMLCanvasElement,
 }
 
-export interface ICanvasSpec {
-   [key: string]: ICanvasSpecElem,
-}
-
-export interface ICanvasSpecElem extends ISize {
-   sprite:     string,
-   select:     string,
-   gridColor:  string,
-   hoverColor: string,
-}
-
 export interface ICtx {
    [key: string]: CanvasRenderingContext2D,
 }
