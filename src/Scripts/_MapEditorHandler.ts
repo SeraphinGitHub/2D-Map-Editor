@@ -10,7 +10,7 @@ import { ViewportClass } from "./Classes/Viewport";
 /** Mouse Binds
  * 
  * Left click:   Set tile
- * Right click:  Delete tile
+ * Right click:  Delete tile / Disactivate current tools
  * Scroll click: Move grid
  * Scroll front: Zoom In
  * Scroll back:  Zoom Out
@@ -19,8 +19,12 @@ import { ViewportClass } from "./Classes/Viewport";
 
 /** Keyboard Binds
  * 
- * Escape: Toggle grid
- * 1 (&):  Test draw line **********
+ * Escape: Disactivate tools
+ * ²:      Toggle grid
+ * 1 (&):  Activ / Disactiv => Tool draw line
+ * 2 (é):  Activ / Disactiv => Tool draw outline square
+ * 3 (""): Activ / Disactiv => Tool draw filled square
+ * 4 ('):  Activ / Disactiv =>Tool draw circle
  * 
 */
 
@@ -172,25 +176,26 @@ const methods = {
       map:   any,
    ) {
 
-      if(sheet.settings.source === undefined) return;
+      if(!sheet.settings.source) return;
 
       const SpriteSheet = new SpriteClass(sheet.settings);
-      const sheetParams = setSheetParams(sheet.properties, SpriteSheet);
-      const mapParams   = setMapParams(map.properties, map.settings);
-
-      const SheetGrid = new ViewportClass(
-         sheetParams,
-         DOM.sheetVP,
-         sheetKey,
-      );
-
-      const MapGrid = new ViewportClass(
-         mapParams,
-         DOM.mapVP,
-         mapKey,
-      );
 
       SpriteSheet.img.addEventListener("load", () => {
+
+         const sheetParams = setSheetParams(sheet.properties, SpriteSheet);
+         const mapParams   = setMapParams(map.properties, map.settings);
+   
+         const SheetGrid = new ViewportClass(
+            DOM.sheetVP,
+            sheetKey,
+            sheetParams,
+         );
+   
+         const MapGrid = new ViewportClass(
+            DOM.mapVP,
+            mapKey,
+            mapParams,
+         );
          
          zoomPrevent();
          initKeyboard(SheetGrid, MapGrid);

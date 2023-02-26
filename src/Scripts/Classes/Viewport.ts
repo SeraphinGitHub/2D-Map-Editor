@@ -1,18 +1,20 @@
 
 import {
    IViewport,
+   IPosition,
+   IPosList,
+   INumber,
    IString,
    ISchema,
-   IPosition,
    ICtx,
    ICanvas,
-   IStrokeRect,
-   IDrawImage,
-   IDestinationImg,
 } from "../Utils/Interfaces";
 
-import { CellClass   } from "./Cell";
-import { SpriteClass } from "./Sprite";
+import { SpriteClass    } from "./Sprite";
+import { CellClass      } from "./Cell";
+import { CollisionClass } from "./Collision";
+import { ToolClass      } from "./Tool";
+import { DrawClass      } from "./Draw";
 
 interface IMousParams {
    eventsList: IString,
@@ -20,129 +22,112 @@ interface IMousParams {
    viewBound:  DOMRect,
 }
 
-
 // =====================================================================
 // ViewportClass
 // =====================================================================
 export class ViewportClass {
 
-   static assignedCell: CellClass | undefined
+   // Classes
+   private Collision: CollisionClass = new CollisionClass();
+   private Tool:      ToolClass      = new ToolClass();
+   private Draw:      DrawClass      = new DrawClass();
 
+   // Statics
+   static assignedCell: CellClass | undefined = undefined;
+
+   // Positions
    position:    IViewport;
    center:      IPosition;
-   scrClickPos: IPosition;
-   hoverPos:    IPosition;
-   hoverCell:   CellClass | undefined;
-   clickCell:   CellClass | undefined;
-   pressedKey:  string    | undefined;
+   scrClickPos: IPosition = { x:0, y:0 };
+   hoverPos:    IPosition = { x:0, y:0 };
+
+   // Cells
+   hoverCell:   CellClass | undefined = undefined;
+   clickCell:   CellClass | undefined = undefined;
+
+   // Lists
+   cellsList:   Map<string, CellClass> = new Map<string, CellClass>();
+   layersName:  IString;
    
+   // Strings
+   schemaKey:   string;
+   hoverColor:  string;
+   pressedKey:  string | undefined = undefined;
+
+   // Numbers
    cellSize:    number;
    columns:     number;
    rows:        number;
-   cellsList:   Map<string, CellClass>;
-
-   scrollPicth: number;
-   scrollMax:   number;
    scrollSize:  number;
+   scrollPicth: number = 20;
+   scrollMax:   number = 350;
 
-   schemaKey:   string;
-   tilesSchema: number[][];
-   itemsSchema: number[][];
+   // Schemas
+   tilesSchema: number[][] = [];
+   itemsSchema: number[][] = [];
 
-   layers:      ICanvas;
-   ctxList:     ICtx;
-   spriteSheet: SpriteClass | undefined;
+   // Canvas properties
    htmlVP:      HTMLElement;
-   hoverColor:  string;
+   spriteSheet: SpriteClass | undefined = undefined;
+   layers:      ICanvas = {};
+   ctxList:     ICtx    = {};
 
+   // Booleans
    isAssignable:    boolean;
-   isClicked:       boolean;
-   isGridShown:     boolean;
-   isToolDrawLine:  boolean;
+   isClicked:       boolean = false;
+   isGridShown:     boolean = true;
 
-   tempCellIDArray: string[]; 
+   // Mouse & Keyboard Lists
+   mouseEventsList: IString = {
+      down:   "mousedown",
+      up:     "mouseup",
+      move:   "mousemove",
+      scroll: "wheel",
+      leave:  "mouseleave",
+   };
 
-   layersName:      IString;
-   mouseEventsList: IString;
-   keysList:        IString;
+   keysList:        IString = {
+      ctrl:   "Control",
+      shift:  "Shift",
+      enter:  "Enter",
+      escape: "Escape",
+      sqrPow: "²",
+      bnd_1:  "&",
+      bnd_2:  "é",
+      bnd_3:  "\"",
+      bnd_4:  "'",
+   };
 
    constructor(
-      params:       any,
       htmlViewport: HTMLElement,
       schemaKey:    string,
+      params:       any,
    ) {
 
-      { // Variables
-         ViewportClass.assignedCell = undefined;
-
-         this.position = {
-            x:      0,
-            y:      0,
-            width:  params.width,
-            height: params.height,
-         }
-
-         this.center   = {
-            x: params.width  /2,
-            y: params.height /2,
-         }
-
-         this.scrClickPos = { x:0, y:0 };
-         this.hoverPos    = { x:0, y:0 };
-         this.hoverCell   = undefined;
-         this.clickCell   = undefined;
-         this.pressedKey  = undefined;
-
-         this.cellSize    = params.cellSize;
-         this.columns     = params.columns;
-         this.rows        = params.rows;
-         this.cellsList   = new Map<string, CellClass>();
-
-         this.scrollPicth = 20,
-         this.scrollMax   = 350,
-         this.scrollSize  = params.cellSize,
-
-         this.schemaKey   = schemaKey;
-         this.tilesSchema = [];
-         this.itemsSchema = [];
-
-         this.layers      = {};
-         this.ctxList     = {};
-         this.spriteSheet = undefined;
-         this.htmlVP      = htmlViewport;
-         this.hoverColor  = params.hoverColor;
-
-         this.isAssignable = params.isAssignable;
-         this.isClicked    = false;
-         this.isGridShown  = true;
-         this.isToolDrawLine = false;
-
-         this.tempCellIDArray = [];
-
-         this.layersName   = {
-            sprite: `${params.name}-sprite`,
-            select: `${params.name}-select`,
-         };
-         
-         this.mouseEventsList = {
-            down:   "mousedown",
-            up:     "mouseup",
-            move:   "mousemove",
-            scroll: "wheel",
-            leave:  "mouseleave",
-         };
-
-         this.keysList = {
-            ctrl:   "Control",
-            shift:  "Shift",
-            enter:  "Enter",
-            escape: "Escape",
-            bnd_1:  "&",
-            bnd_2:  "é",
-            bnd_3:  "\"",
-            bnd_4:  "'",
-         };
+      this.position = {
+         x:      0,
+         y:      0,
+         width:  params.width,
+         height: params.height,
       }
+
+      this.center   = {
+         x: params.width  /2,
+         y: params.height /2,
+      }
+
+      this.htmlVP       = htmlViewport;
+      this.schemaKey    = schemaKey;
+      this.cellSize     = params.cellSize;
+      this.columns      = params.columns;
+      this.rows         = params.rows;
+      this.scrollSize   = params.cellSize,
+      this.hoverColor   = params.hoverColor;
+      this.isAssignable = params.isAssignable;
+      this.layersName   = {
+         sprite: `${params.name}-sprite`,
+         select: `${params.name}-select`,
+      };
    }
 
    init() {
@@ -154,6 +139,17 @@ export class ViewportClass {
 
       // ***** Tempory *****
       // this.storeSchema();
+   }
+
+   adjustPosition(paramPos: IPosition) {
+
+      const { x: vpX,    y: vpY    }: IPosition = this.position;
+      const { x: paramX, y: paramY }: IPosition = paramPos;
+
+      return {
+         x: paramX -vpX,
+         y: paramY -vpY,
+      }
    }
 
    initCanvas() {
@@ -206,29 +202,6 @@ export class ViewportClass {
    
    cycleGrid(callback: Function) {
       this.cellsList.forEach(cell => callback(cell));
-   }
-
-   drawImage(param: IDrawImage) {
-
-      param.ctx.drawImage(
-         param.img,
-         param.sX, param.sY, param.sW, param.sH,
-         param.dX, param.dY, param.dW, param.dH,
-      );
-   }
-   
-   strokeRect(
-      param:     IStrokeRect,
-      color:     string,
-      lineWidth: number
-   ) {
-   
-      param.ctx.strokeStyle = color;
-      param.ctx.lineWidth   = lineWidth;
-   
-      param.ctx.strokeRect(
-         param.dX, param.dY, param.dW, param.dH,
-      );
    }
 
 
@@ -335,7 +308,7 @@ export class ViewportClass {
          const { textureSize, img } = spriteSheet;
          this.renderSprites(spriteCtx, this.drawSprite.bind(this), textureSize, img);
          return;
-      } 
+      }
 
       this.renderSprites(spriteCtx, () => {});
    }
@@ -346,20 +319,18 @@ export class ViewportClass {
       tileSize?:  number,
       tileImg?:   HTMLImageElement,
    ) {
-      
+
       const {
-         x:      vpX,
-         y:      vpY,
          height: vpHeight,
          width:  vpWidth,
-      } = this.position;
+      }: IViewport = this.position;
+
+      const borderColor = "turquoise";
+      const cellSize    = this.scrollSize;
 
       let offsetIn      = 1.5;
       let offsetOut     = offsetIn *2;
       let borderSize    = 0.8;
-
-      const borderColor = "turquoise";
-      const cellSize    = this.scrollSize;
 
       // Hide Grid
       if(!this.isGridShown) {
@@ -369,25 +340,24 @@ export class ViewportClass {
       }
 
       this.cycleGrid((cell: CellClass) => {
-
-         const [[cellX, cellY]]: number[][] = cell.setPosition(cellSize);
-         const x = cellX -vpX;
-         const y = cellY -vpY;
-
-         if(!this.isCellInView(x, y, vpWidth, vpHeight, -cellSize)) return;
+         const { x: cellX,   y: cellY }: IPosition = this.adjustPosition(cell.position!);
+         
+         if(!this.isCellInView(cellX, cellY, vpWidth, vpHeight, -cellSize)) return;
          
          const destination = {
-            dX: x +offsetIn,
-            dY: y +offsetIn,
-            dW: cellSize -offsetOut,
-            dH: cellSize -offsetOut
+            x: cellX +offsetIn,
+            y: cellY +offsetIn,
+            width:  cellSize -offsetOut,
+            height: cellSize -offsetOut
          }
 
          // Draw Grid Color
-         this.strokeRect({
-            ctx: spriteCtx,
-            ...destination,
-         }, borderColor, borderSize);
+         this.Draw.strokeRect(
+            spriteCtx,
+            destination,
+            borderColor,
+            borderSize
+         );
 
          // Draw Sprites
          drawSprite(spriteCtx, tileImg, tileSize, destination, cell.tileIndex);
@@ -399,7 +369,7 @@ export class ViewportClass {
       spriteCtx:   CanvasRenderingContext2D,
       tileImg:     HTMLImageElement,
       tileSize:    number,
-      destination: IDestinationImg,
+      destination: IViewport,
       index:       number[],
    ) {
       
@@ -409,17 +379,19 @@ export class ViewportClass {
       const drawX: number = spriteX *tileSize;
       const drawY: number = spriteY *tileSize;
 
-      this.drawImage({
-         ctx: spriteCtx,
-         img: tileImg,
+      const source: IViewport = {
+         x: drawX,
+         y: drawY,
+         width:  tileSize,
+         height: tileSize,
+      };
 
-         sX: drawX,
-         sY: drawY,
-         sW: tileSize,
-         sH: tileSize,
-
-         ...destination,
-      });
+      this.Draw.image(
+         spriteCtx,
+         tileImg,
+         source,
+         destination,
+      );
    }
 
 
@@ -431,22 +403,67 @@ export class ViewportClass {
       this.clearCanvas(selectCtx);
       this.renderSelectedCell(selectCtx);
 
-      if(this.hoverCell === undefined) return;
+      if(!this.hoverCell) return;
+      this.renderHoverCell(selectCtx, this.hoverCell!, this.hoverColor);
+      
+      if(!this.Tool.isActive || !this.clickCell || this.isAssignable) return;
+      
+      this.Tool.hoverCellsIDArray = [];
+      this.Tool.drawLine(selectCtx, this.clickCell, this.hoverCell, this.adjustPosition.bind(this));
 
-      this.toolDrawLine(); // ****************
+      
 
-      this.renderHoverCell(selectCtx, this.hoverCell, this.hoverColor);
+
+      const {
+         height: vpHeight,
+         width:  vpWidth,
+      }: IViewport = this.position;
+
+      this.cycleGrid((cell: CellClass) => {
+
+         const { x: cellX,   y: cellY     }: IPosition = this.adjustPosition(cell.position!);
+         const { top, right, bottom, left }: IPosList  = cell.collider!;
+
+         const cellCollider: IPosList = {
+            top:    this.adjustPosition(top),
+            right:  this.adjustPosition(right),
+            bottom: this.adjustPosition(bottom),
+            left:   this.adjustPosition(left),
+         }
+
+         if(!this.isCellInView(cellX, cellY, vpWidth, vpHeight, -this.scrollSize)) return;
+
+         // this.Draw.diamond(selectCtx, cellCollider, "rgba(100, 100, 100, 0.4)");
+         
+         if(!this.Tool.raycast || !this.Collision.line_toSquare(this.Tool.raycast, cellCollider)) return;
+         // this.Draw.diamond(selectCtx, cellCollider, "blue");
+         this.Tool.hoverCellsIDArray.push(cell);
+      });
+
+      this.Tool.hoverCellsIDArray.forEach(cell => {
+
+         const { top, right, bottom, left }: IPosList  = cell!.collider!;
+
+         const cellCollider: IPosList = {
+            top:    this.adjustPosition(top),
+            right:  this.adjustPosition(right),
+            bottom: this.adjustPosition(bottom),
+            left:   this.adjustPosition(left),
+         }
+         
+         this.Draw.diamond(selectCtx, cellCollider, "blue");
+      });
    }
 
    renderSelectedCell(ctx: CanvasRenderingContext2D) {
 
-      if(!this.isAssignable) return;
+      if(!this.isAssignable || !ViewportClass.assignedCell) return;
       this.renderHoverCell(ctx, ViewportClass.assignedCell, "blue");
    }
 
    renderHoverCell(
       selectCtx: CanvasRenderingContext2D,
-      cell:      any,
+      cell:      CellClass,
       color:     string,
    ) {
       
@@ -454,36 +471,39 @@ export class ViewportClass {
       const fillSize:   number = 6;
       const cellSize:   number = this.scrollSize;
       
-      if(cell === undefined) return
+      if(!cell) return
 
-      const { x: cellX, y: cellY } = cell.position;
-      const { x: vpX,   y: vpY   } = this.position;
+      const { x: cellX, y: cellY }: IPosition = this.adjustPosition(cell.position!)
 
       const destination = {
-         dX: cellX -vpX,
-         dY: cellY -vpY,
-         dW: cellSize,
-         dH: cellSize,
+         x:      cellX,
+         y:      cellY,
+         width:  cellSize,
+         height: cellSize,
       }
 
       // Draw HoverCell borders
-      this.strokeRect({
-         ctx: selectCtx,
-         ...destination,
-      }, "black", borderSize);
+      this.Draw.strokeRect(
+         selectCtx,
+         destination,
+         "black",
+         borderSize
+      );
       
       // Draw HoverCell color
-      this.strokeRect({
-         ctx: selectCtx,
-         ...destination,
-      }, color, fillSize);
+      this.Draw.strokeRect(
+         selectCtx,
+         destination,
+         color,
+         fillSize
+      );
    }
 
 
    // Mouse Behaviors
    mouseClick(event: MouseEvent, eventName: string) {
 
-      // Left Click
+      // ***** Left Click *****
       if(event.which === 1) {
 
          if(eventName === this.mouseEventsList.down) {
@@ -493,10 +513,20 @@ export class ViewportClass {
          }
       }
 
-      // Right Click
-      if(event.which === 3) this.deleteTile();
+      // ***** Right Click *****
+      if(event.which === 3) {
 
-      // Scroll Click
+         if(eventName === this.mouseEventsList.down) {
+            this.clickCell = undefined;
+            if(!this.Tool.isActive) this.deleteTile();
+         }
+         
+         if(eventName === this.mouseEventsList.up) {
+            this.Tool.isActive = false;
+         }
+      }
+
+      // ***** Scroll Click *****
       if(event.which === 2) {
 
          if(eventName === this.mouseEventsList.down) {
@@ -527,7 +557,7 @@ export class ViewportClass {
       selectCtx: CanvasRenderingContext2D,
    ) {
 
-      if(this.hoverCell === undefined) return;
+      if(!this.hoverCell) return;
       
       const scrollPicth:      number    = this.scrollPicth;
       const { colID, rowID }: CellClass = this.hoverCell!;
@@ -539,6 +569,8 @@ export class ViewportClass {
       
       // Zoom Out
       else this.zoom(colID, rowID, -scrollPicth, scrollPicth);
+
+      this.cycleGrid((cell: CellClass) => cell.setPosition(this.scrollSize));
 
       this.refreshSprites();
       this.refreshHoverCell(selectCtx);
@@ -642,31 +674,33 @@ export class ViewportClass {
 
    setClickCell() {
 
-      if(this.hoverCell === undefined) return;
+      if(!this.hoverCell) return;
       this.clickCell = this.hoverCell;
    }
 
    moveGrid() {
 
-      if(!this.isClicked || this.hoverCell === undefined) return;
+      if(!this.isClicked || !this.hoverCell) return;
 
       const { x: vpX,     y: vpY     }: IViewport = this.position;
       const { x: centerX, y: centerY }: IPosition = this.center;
       const { x: mouseX,  y: mouseY  }: IPosition = this.hoverPos;
       const { x: clickX,  y: clickY  }: IPosition = this.scrClickPos;
 
-      const { x: mouseOffsetX, y: mouseOffsetY} = {
-         x: mouseX -clickX,
-         y: mouseY -clickY,
-      }
-
       const { x: vpOffsetX, y: vpOffsetY} = {
          x: vpX +centerX,
          y: vpY +centerY,
       }
 
+      const { x: mouseOffsetX, y: mouseOffsetY} = {
+         x: mouseX -clickX,
+         y: mouseY -clickY,
+      }
+
       this.position.x -= this.moveAxis(vpOffsetX, mouseOffsetX, this.columns)!;
       this.position.y -= this.moveAxis(vpOffsetY, mouseOffsetY, this.rows)!;
+      
+      this.Tool.updateRaycast(this.position);
 
       this.refreshSprites();
    }
@@ -722,13 +756,13 @@ export class ViewportClass {
    assignTile() {
       
       const hoverCell = this.hoverCell;
-      if(hoverCell === undefined) return;
+      if(!hoverCell) return;
       
       if(ViewportClass.assignedCell !== hoverCell && this.isAssignable) {
          ViewportClass.assignedCell = hoverCell;
       }
 
-      if(ViewportClass.assignedCell === undefined) return;
+      if(!ViewportClass.assignedCell) return;
       
       let   [ hoverX,  hoverY  ] = hoverCell.tileIndex;
       const [ selectX, selectY ] = ViewportClass.assignedCell.tileIndex;
@@ -744,7 +778,7 @@ export class ViewportClass {
 
    deleteTile() {
 
-      if(this.hoverCell === undefined) return;
+      if(!this.hoverCell) return;
       this.hoverCell.tileIndex = [];
       this.refreshSprites();
    }
@@ -755,11 +789,35 @@ export class ViewportClass {
       switch(this.pressedKey) {
 
          case this.keysList.escape:
+            this.Tool.isActive = !this.Tool.isActive;
+         break;
+
+         case this.keysList.sqrPow:
             this.toggleGrid();
          break;
 
          case this.keysList.bnd_1:
-            this.isToolDrawLine = !this.isToolDrawLine;
+            this.clickCell     = undefined;
+            this.Tool.isActive = !this.Tool.isActive;
+            this.Tool.isLine   = true;
+         break;
+
+         case this.keysList.bnd_2:
+            this.clickCell      = undefined;
+            this.Tool.isActive  = !this.Tool.isActive;
+            this.Tool.isOutArea = true;
+         break;
+
+         case this.keysList.bnd_3:
+            this.clickCell       = undefined;
+            this.Tool.isActive   = !this.Tool.isActive;
+            this.Tool.isFillArea = true;
+         break;
+
+         case this.keysList.bnd_4:
+            this.clickCell     = undefined;
+            this.Tool.isActive = !this.Tool.isActive;
+            this.Tool.isCircle = true;
          break;
       }
    }
@@ -769,48 +827,4 @@ export class ViewportClass {
       this.isGridShown = !this.isGridShown;
       this.refreshSprites();
    }
-
-
-   // Tools
-   toolDrawLine() {
-      
-      if(!this.isToolDrawLine ||  this.clickCell === undefined) return;
-      
-      const hoverCell = this.hoverCell;
-      const clickCell = this.clickCell;
-      const { x: hoverX, y: hoverY } = hoverCell!.center;
-      const { x: clickX, y: clickY } = clickCell.center;
-
-      const raycast = {
-         startX: clickX,
-         startY: clickY,
-         endX:   hoverX,
-         endY:   hoverY,
-      }
-      
-      if(!hoverCell!.line_toSquare(raycast) || hoverCell === clickCell) return;
-
-      const selectCtx = this.ctxList[this.layersName.select];
-
-      this.tempCellIDArray.push(hoverCell!.id);
-      clickCell.drawPathLine(selectCtx, hoverCell!, this.position);
-      // hoverCell.drawWall(ctx.isoSelect, true);
-      // hoverCell.drawWallCollider(ctx.isoSelect, isDiamond, DebugVar.showWallCol);
-   }
-
-   
-   // const drawBuiltWalls = (cell) => {
-   
-   //    TempWallsIDArray.forEach(id => {
-   //       let tempCell = Grid.cellsList[id];
-   
-   //       tempCell.isBlocked = true;
-   //       tempCell.blockingItem = "wall";
-   //       tempCell.drawWall(ctx.isoSelect, false);
-   //    });
-   
-   //    StartWall.drawPathWall(ctx.isoSelect, GetCell);
-   //    StartWall = cell;
-   // }
-
 }
