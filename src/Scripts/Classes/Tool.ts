@@ -2,6 +2,7 @@
 import {
    INumber,
    IPosition,
+   IPosList,
 } from "../Utils/Interfaces";
 
 import { CellClass      } from "./Cell";
@@ -14,48 +15,79 @@ import { DrawClass      } from "./Draw";
 export class ToolClass {
 
    // Classes
-   private Collision: CollisionClass = new CollisionClass();
-   private Draw:      DrawClass      = new DrawClass();
+   private Collision:   CollisionClass = new CollisionClass();
+   private Draw:        DrawClass      = new DrawClass();
 
-   hoverCellsIDArray: CellClass[] = [];
-   raycast:    INumber = {};
+   cellColliderArray:   CellClass[] = [];
+   raycast:             INumber = {};
    
-   isActive:   boolean = false;
-   isLine:     boolean = false;
-   isOutArea:  boolean = false;
-   isFillArea: boolean = false;
-   isCircle:   boolean = false;
+   // Booleans
+   isActive:      boolean = false;
+   isLine:        boolean = false;
+   isOutArea:     boolean = false;
+   isFillArea:    boolean = false;
+   isCircle:      boolean = false;
 
-   updateRaycast(vpPosition: IPosition) {
+   // Numbers
+   lineSize:      number = 4;
+   pointSize:     number = 6;
+   
+   // Strings
+   lineColor:     string = "red";
+   pointColor:    string = "blue";
+   deleteColor:   string = "rgba(50, 50, 50, 0.7)";
 
-      const { x: vpX, y: vpY             }: IPosition = vpPosition;
-      const { startX, startY, endX, endY }: INumber   = this.raycast;
-      console.log(this.raycast); // ******************************************************
 
-      this.raycast = {
-         startX: startX -vpX,
-         startY: startY -vpY,
-         endX:   endX   -vpX,
-         endY:   endY   -vpY,
+   setCellColliderArray(
+      cell: CellClass,
+      cellCollider: IPosList,
+   ) {
+      // **** DEBUG ****
+      // this.Draw.diamond(selectCtx, cellCollider, "rgba(100, 100, 100, 0.4)");
+      
+      if(!this.isLine
+      || !this.raycast
+      || !this.Collision.line_toSquare(this.raycast, cellCollider)
+      ) return;
+
+      this.cellColliderArray.push(cell);
+
+      // **** DEBUG ****
+      // this.Draw.diamond(selectCtx, cellCollider, "blue");
+   }
+
+   cycleColliderArray(callback: Function) {
+      
+      this.cellColliderArray.forEach(cell => callback(cell));
+      this.cellColliderArray = [];
+   }
+
+   display(selectCtx: CanvasRenderingContext2D) {
+
+      if(this.isLine) {
+         const { startX, startY, endX, endY }: INumber = this.raycast;
+         const startPos: IPosition = { x: startX, y: startY };
+         const endPos:   IPosition = { x: endX,   y: endY   };
+
+         this.Draw.line(selectCtx, startPos, endPos, this.lineColor, this.lineSize);
+         this.Draw.circle(selectCtx, startPos, this.pointSize, this.pointColor);
+         this.Draw.circle(selectCtx, endPos,   this.pointSize, this.pointColor);
       }
-
-      console.log(this.raycast); // ******************************************************
    }
 
    drawLine(
-      selectCtx: CanvasRenderingContext2D,
-      startCell: CellClass,
-      endCell:   CellClass,
-      adjustPos: Function,
+      vpPosition: IPosition,
+      startCell:  CellClass,
+      endCell:    CellClass,
    ) {
 
       if(!this.isLine) return;
       
-      let startCenter;
-      let endCenter;
+      const startCenter: IPosition = startCell.adjustPosition(vpPosition, startCell.center!);
+      const endCenter:   IPosition = endCell.adjustPosition(vpPosition, endCell.center!);
 
-      const { x: startX, y: startY }: IPosition = startCenter = startCell.center!;
-      const { x: endX,   y: endY   }: IPosition = endCenter   = endCell.center!;
+      const { x: startX, y: startY }: IPosition = startCenter;
+      const { x: endX,   y: endY   }: IPosition = endCenter;
 
       this.raycast = {
          startX,
@@ -63,15 +95,5 @@ export class ToolClass {
          endX,
          endY,
       }
-
-      const startPos: IPosition = adjustPos(startCenter);
-      const endPos:   IPosition = adjustPos(endCenter);
-
-      // if(!this.Collision.line_toSquare(raycast, hoverCell!.collider!) || hoverCell === startCell) end
-
-      // this.tempCellIDArray.push(hoverCell!.id); // ***********
-
-
-      this.Draw.line(selectCtx, startPos, endPos, "red", 4);
    }
 }

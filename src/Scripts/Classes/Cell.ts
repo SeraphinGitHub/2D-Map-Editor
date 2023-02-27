@@ -77,4 +77,31 @@ export class CellClass {
       this.center   = center;
       this.collider = collider;
    }
+
+   adjustPosition(
+      vpPosition: IPosition,
+      paramPos:   IPosition,
+   ) {
+
+      const { x: vpX,    y: vpY    }: IPosition = vpPosition;
+      const { x: paramX, y: paramY }: IPosition = paramPos;
+
+      return {
+         x: paramX -vpX,
+         y: paramY -vpY,
+      }
+   }
+
+   adjustColliderPosition(vpPosition: IPosition) {
+
+      const { top, right, bottom, left }: IPosList = this.collider!;
+   
+      return {
+         top:    this.adjustPosition(vpPosition, top),
+         right:  this.adjustPosition(vpPosition, right),
+         bottom: this.adjustPosition(vpPosition, bottom),
+         left:   this.adjustPosition(vpPosition, left),
+      }
+   }
+
 }

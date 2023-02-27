@@ -67,13 +67,13 @@ export class CollisionClass {
 
       const { top, right, bottom, left } = square;
       
-      const { leftSide, rightSide, topSide, bottomSide } = {
+      const { topSide, rightSide, bottomSide, leftSide } = {
 
-         leftSide: {
-            startX: bottom.x,
-            startY: bottom.y,
-            endX:   top.x,
-            endY:   top.y,
+         topSide: {
+            startX: top.x,
+            startY: top.y,
+            endX:   right.x,
+            endY:   right.y,
          },
 
          rightSide: {
@@ -83,30 +83,30 @@ export class CollisionClass {
             endY:   bottom.y,
          },
 
-         topSide: {
-            startX: top.x,
-            startY: top.y,
-            endX:   right.x,
-            endY:   right.y,
-         },
-
          bottomSide: {
             startX: bottom.x,
             startY: bottom.y,
             endX:   left.x,
             endY:   left.y,
          },
+
+         leftSide: {
+            startX: left.x,
+            startY: left.y,
+            endX:   top.x,
+            endY:   top.y,
+         },
       };
 
-      let isLeftSide:   boolean = this.line_toLine(line, leftSide  );
-      let isRightSide:  boolean = this.line_toLine(line, rightSide );
       let isTopSide:    boolean = this.line_toLine(line, topSide   );
+      let isRightSide:  boolean = this.line_toLine(line, rightSide );
+      let isLeftSide:   boolean = this.line_toLine(line, leftSide  );
       let isBottomSide: boolean = this.line_toLine(line, bottomSide);
 
-      if(!isLeftSide
+      if(!isTopSide
       && !isRightSide
-      && !isTopSide
-      && !isBottomSide) {
+      && !isBottomSide
+      && !isLeftSide) {
 
          return false;
       }
