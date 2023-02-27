@@ -35,6 +35,7 @@ export class ToolClass {
    // Strings
    lineColor:     string = "red";
    pointColor:    string = "blue";
+   useColor:      string = "rgba( 0,  0,  0, 0.5)";
    deleteColor:   string = "rgba(50, 50, 50, 0.7)";
 
 
@@ -58,8 +59,7 @@ export class ToolClass {
 
    cycleColliderArray(callback: Function) {
       
-      this.cellColliderArray.forEach(cell => callback(cell));
-      this.cellColliderArray = [];
+      this.cellColliderArray.forEach((cell: CellClass) => callback(cell));
    }
 
    display(selectCtx: CanvasRenderingContext2D) {
@@ -96,4 +96,5 @@ export class ToolClass {
          endY,
       }
    }
+   
 }

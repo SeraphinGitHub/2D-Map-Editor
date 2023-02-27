@@ -12,7 +12,6 @@ import {
 
 import { SpriteClass    } from "./Sprite";
 import { CellClass      } from "./Cell";
-import { CollisionClass } from "./Collision";
 import { ToolClass      } from "./Tool";
 import { DrawClass      } from "./Draw";
 
@@ -339,6 +338,7 @@ export class ViewportClass {
       const vpPosition: IPosition = this.position;
       
       // Use Tools
+      Tool.cellColliderArray = [];
       Tool.drawLine(vpPosition, this.selectCell, this.hoverCell!);
 
 
@@ -357,7 +357,10 @@ export class ViewportClass {
          const { x: cellX, y: cellY }: IPosition   = cell.adjustPosition(this.position, cell.position!);
          const destination           : IViewport   = this.setSpriteDest(cellX, cellY);
 
-         if(!this.isDeleting) this.drawSprite(selectCtx, img, textureSize, destination, ViewportClass.assignedCell!.tileIndex);
+         if(!this.isDeleting) {
+            this.drawSprite(selectCtx, img, textureSize, destination, ViewportClass.assignedCell!.tileIndex);
+            this.Draw.fillRect(selectCtx, destination, Tool.useColor);
+         }
          else this.Draw.fillRect(selectCtx, destination, Tool.deleteColor);
       });
 
@@ -569,7 +572,9 @@ export class ViewportClass {
          
          if(eventName === this.mouseEventsList.down) {
             this.assignTile(this.hoverCell);
-            this.Tool.cycleColliderArray((cell: CellClass) => this.assignTile.bind(this, cell));
+            
+            this.Tool.cycleColliderArray(this.assignTile.bind(this));
+            this.Tool.cellColliderArray = [];
          }
          
          if(eventName === this.mouseEventsList.up) {
@@ -584,6 +589,7 @@ export class ViewportClass {
          if(eventName === this.mouseEventsList.down) {
             this.isDeleting = true;
             this.setSelectedCell();
+            this.Tool.cellColliderArray = [];
          }
 
          if(eventName === this.mouseEventsList.up) {
@@ -592,7 +598,8 @@ export class ViewportClass {
             this.unAssignTile();
             this.deleteTile(this.hoverCell);
 
-            this.Tool.cycleColliderArray((cell: CellClass) => this.deleteTile.bind(this, cell));
+            this.Tool.cycleColliderArray(this.deleteTile.bind(this));
+            this.Tool.cellColliderArray = [];
          }
       }
 
@@ -791,7 +798,7 @@ export class ViewportClass {
       cell.tileIndex          = ViewportClass.assignedCell.tileIndex;
       const index: number     = this.getSchemaIndex(cell);
       this.tilesSchema[index] = cell.tileIndex;
-      
+
       this.refreshSprites();
    }
 
