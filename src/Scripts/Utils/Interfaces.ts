@@ -7,7 +7,6 @@ export interface IPosition {
 }
 
 export interface IPosList {
-   
    [key: string]: IPosition,
 }
 

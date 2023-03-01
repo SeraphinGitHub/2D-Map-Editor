@@ -51,7 +51,8 @@ export class ViewportClass {
    // Strings
    schemaKey:        string;
    hoverColor:       string;
-   pressedKey:       string | undefined = undefined;
+   oldPressKey:      string | undefined = undefined;
+   newPressKey:      string | undefined = undefined;
    gridColor:        string = "turquoise";
 
    // Numbers
@@ -88,15 +89,15 @@ export class ViewportClass {
    };
 
    keysList:        IString = {
-      ctrl:   "Control",
-      shift:  "Shift",
-      enter:  "Enter",
-      escape: "Escape",
-      sqrPow: "²",
-      bnd_1:  "&",
-      bnd_2:  "é",
-      bnd_3:  "\"",
-      bnd_4:  "'",
+      ctrl:    "Control",
+      shift:   "Shift",
+      enter:   "Enter",
+      escape:  "Escape",
+      sqrPow:  "²",
+      short_1: "&",
+      short_2: "é",
+      short_3: "\"",
+      short_4: "'",
    };
 
    constructor(
@@ -129,6 +130,15 @@ export class ViewportClass {
          sprite: `${params.name}-sprite`,
          select: `${params.name}-select`,
       };
+   }
+
+   reset() {
+
+      ViewportClass.assignedCell = undefined;
+      this.selectCell  = undefined;
+      this.tilesSchema = [];
+      this.cellsList.clear();
+      this.cellsInViewList.clear();
    }
 
    init() {
@@ -338,8 +348,9 @@ export class ViewportClass {
       const vpPosition: IPosition = this.position;
       
       // Use Tools
+      Tool.ctx = selectCtx;
       Tool.cellColliderArray = [];
-      Tool.drawLine(vpPosition, this.selectCell, this.hoverCell!);
+      Tool.use(vpPosition, this.selectCell, this.hoverCell!);
 
 
       // Tool collision check
@@ -350,11 +361,11 @@ export class ViewportClass {
       });
 
 
-      // Render collide cells
-      Tool.cycleColliderArray((cell: CellClass) => {
+      // Render colliding cells
+      if(!Tool.isDebug) Tool.cycleColliderArray((cell: CellClass) => {
 
          const { textureSize, img   }: SpriteClass = this.spriteSheet!;
-         const { x: cellX, y: cellY }: IPosition   = cell.adjustPosition(this.position, cell.position!);
+         const { x: cellX, y: cellY }: IPosition   = cell.adjustPosition(vpPosition, cell.position!);
          const destination           : IViewport   = this.setSpriteDest(cellX, cellY);
 
          if(!this.isDeleting) {
@@ -366,7 +377,7 @@ export class ViewportClass {
 
 
       // Display tool selection
-      Tool.display(selectCtx);
+      Tool.display();
    }
 
    renderSelectedCell() {
@@ -753,7 +764,7 @@ export class ViewportClass {
 
    zoomReset() {
 
-      if(this.pressedKey !== this.keysList.ctrl) return;
+      if(this.newPressKey !== this.keysList.ctrl) return;
 
       this.isScrClicked = false;
       this.scrollSize   = this.cellSize;
@@ -822,32 +833,43 @@ export class ViewportClass {
 
    // Keyboard Events
    handlePressedKeys() {
-      switch(this.pressedKey) {
+      
+      // Combinations
+      if(this.oldPressKey !== this.newPressKey) switch(`${this.oldPressKey} + ${this.newPressKey}`) {
+
+         case `${this.keysList.ctrl} + ${this.keysList.sqrPow}`:
+            this.Tool.isDebug = !this.Tool.isDebug;
+         break;
+      }
+      
+      // Single key
+      else switch(this.newPressKey) {
 
          case this.keysList.escape:
             this.Tool.isActive = !this.Tool.isActive;
+            this.Tool.cellColliderArray = [];
          break;
 
          case this.keysList.sqrPow:
             this.toggleGrid();
          break;
 
-         case this.keysList.bnd_1:
+         case this.keysList.short_1:
             this.activateTool();
             this.Tool.isLine = true;
          break;
 
-         case this.keysList.bnd_2:
+         case this.keysList.short_2:
             this.activateTool();
             this.Tool.isOutArea = true;
          break;
 
-         case this.keysList.bnd_3:
+         case this.keysList.short_3:
             this.activateTool();
             this.Tool.isFillArea = true;
          break;
 
-         case this.keysList.bnd_4:
+         case this.keysList.short_4:
             this.activateTool();
             this.Tool.isCircle = true;
          break;
@@ -863,8 +885,14 @@ export class ViewportClass {
    activateTool() {
       
       if(!ViewportClass.assignedCell) return;
-      this.selectCell    = undefined;
-      this.Tool.isActive = !this.Tool.isActive;
+
+      this.selectCell      = undefined;
+      this.Tool.isActive   = true;
+      
+      this.Tool.isLine     = false;
+      this.Tool.isOutArea  = false;
+      this.Tool.isFillArea = false;
+      this.Tool.isCircle   = false;
    }
 
 }

@@ -38,10 +38,15 @@ import { ViewportClass } from "./Classes/Viewport";
 // ================================================================================================
 // Global Variables / Functions
 // ================================================================================================
+let SheetGrid:     ViewportClass | undefined = undefined;
+let MapGrid:       ViewportClass | undefined = undefined;
+
 const mapKey:      string = "storedMap";
 const sheetKey:    string = "storedSheet";
 let exportVarName: string = "TileMapSchema";
-let pressedKey:    string | undefined = undefined;
+
+let oldPressKey: string | undefined = undefined;
+let newPressKey: string | undefined = undefined;
 
 
 document.body.oncontextmenu = (event: MouseEvent) => {
@@ -128,7 +133,7 @@ const setMapParams = (
 const zoomPrevent = () => {
    
    window.addEventListener("wheel", (event) => {
-      if(pressedKey === "Control") event.preventDefault();
+      if(newPressKey === "Control") event.preventDefault();
 
    }, { passive: false });
 }
@@ -149,18 +154,28 @@ const initKeyboard = (
 
       keysPrevent(event);
 
-      pressedKey = event.key;
-      SheetGrid.pressedKey = pressedKey;
-      MapGrid.pressedKey   = pressedKey;
+      newPressKey = event.key;
+      if(!oldPressKey) oldPressKey = newPressKey;
+
+      SheetGrid.newPressKey = newPressKey;
+      SheetGrid.oldPressKey = oldPressKey;
+
+      MapGrid.newPressKey   = newPressKey;
+      MapGrid.oldPressKey   = oldPressKey;
 
       MapGrid.handlePressedKeys();
    });
       
-   window.addEventListener("keyup", () => {
+   window.addEventListener("keyup", (event) => {
 
-      pressedKey = undefined;
-      SheetGrid.pressedKey = pressedKey;
-      MapGrid.pressedKey   = pressedKey;
+      newPressKey = undefined;
+      if(event.key === oldPressKey) oldPressKey = undefined;
+
+      SheetGrid.newPressKey = newPressKey;
+      SheetGrid.oldPressKey = oldPressKey;
+
+      MapGrid.newPressKey   = newPressKey;
+      MapGrid.oldPressKey   = oldPressKey;
    });
 }
 
@@ -185,13 +200,13 @@ const methods = {
          const sheetParams = setSheetParams(sheet.properties, SpriteSheet);
          const mapParams   = setMapParams(map.properties, map.settings);
    
-         const SheetGrid = new ViewportClass(
+         SheetGrid = new ViewportClass(
             DOM.sheetVP,
             sheetKey,
             sheetParams,
          );
    
-         const MapGrid = new ViewportClass(
+         MapGrid = new ViewportClass(
             DOM.mapVP,
             mapKey,
             mapParams,
@@ -208,6 +223,12 @@ const methods = {
          MapGrid.init();
       });
    },
+
+   reset() {
+
+      if(!SheetGrid) return;
+      SheetGrid.reset();
+   }
 }
 
 export default methods;

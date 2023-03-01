@@ -35,12 +35,12 @@
 
 
 
-         <select class="Flex select" name="images-select" id="1">
-            <option value="file-1">Tile_0.png</option>
-            <option value="file-2">Tile_1.png</option>
-            <option value="file-3">Tile_2.png</option>
-            <option value="file-4">Items_0.png</option>
-            <option value="file-5">Items_1.png</option>
+         <select class="Flex select" name="images-select" id="1" @change="changeFile($event)" v-model="selectKey">
+            <option value="0-200">tile_0.png</option>
+            <option value="1-200">tile_1.png</option>
+            <option value="2-200">tile_2.png</option>      <!-- ***** Tempory ***** -->
+            <option value="3-200">tile_3.png</option>
+            <option value="4-256">tile_4.png</option>
          </select>
          
          <Viewport class="sheet-VP" :grid="this.sheet"/>
@@ -68,11 +68,11 @@
    import Viewport from "./Components/Viewport.vue"
 
    // Scripts
-   import mapEditor from "./Scripts/_MapEditorHandler.ts"
+   import editorHandler from "./Scripts/_MapEditorHandler.ts"
 
    export default {
       mixins: [
-         mapEditor,
+         editorHandler,
       ],
 
       components: {
@@ -80,21 +80,68 @@
       },
 
       mounted() {
-         const DOM = {
-            sheetVP: document.querySelector(".sheet-VP"),
-            mapVP:   document.querySelector(".map-VP"),
-         };
+         this.initMapEditor();
+      },
 
-         mapEditor.init(
-            DOM,
-            this.sheet,
-            this.map,
-         );
+      methods: {
+
+         initMapEditor() {
+
+            const DOM = {
+               sheetVP: document.querySelector(".sheet-VP"),
+               mapVP:   document.querySelector(".map-VP"),
+            };
+
+            editorHandler.init(
+               DOM,
+               this.sheet,
+               this.map,
+            );
+         },
+
+         preview() {
+         //    const file = document.getElementById("file").files;
+
+         //    if(file.length > 0) {
+         //       const fileReader = new FileReader();
+               
+         //       fileReader.onload = (event) => {
+         //          const imagePreview = document.querySelector(".imagePreview");
+         //          imagePreview.setAttribute("src", event.target.result);
+         //       }
+
+         //       fileReader.readAsDataURL(file[0]);
+         //    } this.file = this.$refs.addFile.files[0];
+         // },
+
+
+         // postArticle() {
+            
+         //    console.log(this.file); // ******************************************************
+         },
+
+         changeFile(event) {
+            
+            // ***** Tempory *****
+
+            const splitValue = event.target.value.split("-"); 
+            const fileIndex  = splitValue[0];
+            const tileSize   = splitValue[1];
+
+            this.sheet.settings.source = `./tiles_${fileIndex}.png`;
+            this.sheet.settings.textureSize = Number(tileSize);
+
+            editorHandler.reset();
+            this.initMapEditor();
+
+            // ***** Tempory *****
+         },
       },
 
       data() {
       return {
-         file: null,
+         file:       null,
+         selectKey:  "0-200",
 
          sheet: {
             properties: {
@@ -128,29 +175,6 @@
             },
          },
       }},
-
-      methods: {            
-         // preview() {
-         //    const file = document.getElementById("file").files;
-
-         //    if(file.length > 0) {
-         //       const fileReader = new FileReader();
-               
-         //       fileReader.onload = (event) => {
-         //          const imagePreview = document.querySelector(".imagePreview");
-         //          imagePreview.setAttribute("src", event.target.result);
-         //       }
-
-         //       fileReader.readAsDataURL(file[0]);
-         //    } this.file = this.$refs.addFile.files[0];
-         // },
-
-
-         // postArticle() {
-            
-         //    console.log(this.file); // ******************************************************
-         // },
-      }
       
    }
 </script>
